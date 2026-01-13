@@ -65,15 +65,19 @@ try:
                 organism_stats[organism]["with_sex"] += 1
 
         # Create dataframe
-        organism_data = pd.DataFrame([
-            {
-                "Organism": organism,
-                "Total Studies": stats["total"],
-                "With Sex Metadata": stats["with_sex"],
-                "Completeness %": (stats["with_sex"] / stats["total"] * 100) if stats["total"] > 0 else 0,
-            }
-            for organism, stats in organism_stats.items()
-        ]).sort_values("Completeness %", ascending=False)
+        organism_data = pd.DataFrame(
+            [
+                {
+                    "Organism": organism,
+                    "Total Studies": stats["total"],
+                    "With Sex Metadata": stats["with_sex"],
+                    "Completeness %": (stats["with_sex"] / stats["total"] * 100)
+                    if stats["total"] > 0
+                    else 0,
+                }
+                for organism, stats in organism_stats.items()
+            ]
+        ).sort_values("Completeness %", ascending=False)
 
         fig_organism = px.bar(
             organism_data,
@@ -112,14 +116,18 @@ try:
             study_types[study_type]["with_sex"] += 1
 
     if study_types:
-        disease_data = pd.DataFrame([
-            {
-                "Disease Category": f"{study_type} Studies",
-                "Studies": stats["total"],
-                "Completeness %": (stats["with_sex"] / stats["total"] * 100) if stats["total"] > 0 else 0,
-            }
-            for study_type, stats in study_types.items()
-        ]).sort_values("Completeness %", ascending=False)
+        disease_data = pd.DataFrame(
+            [
+                {
+                    "Disease Category": f"{study_type} Studies",
+                    "Studies": stats["total"],
+                    "Completeness %": (stats["with_sex"] / stats["total"] * 100)
+                    if stats["total"] > 0
+                    else 0,
+                }
+                for study_type, stats in study_types.items()
+            ]
+        ).sort_values("Completeness %", ascending=False)
 
         fig_disease = px.bar(
             disease_data,
