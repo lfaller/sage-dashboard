@@ -37,10 +37,22 @@ jobs:
         run: poetry install
 
       - name: Run Black
-        run: poetry run black --check .
+        run: poetry run black .
 
       - name: Run Ruff
-        run: poetry run ruff check .
+        run: poetry run ruff check . --fix
+
+      - name: Commit auto-fixed files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No formatting changes needed"
+          else
+            git commit -m "style: auto-format code with Black and Ruff" -m "Apply Black formatting and fix Ruff linting issues with --fix flag" -m "Co-Authored-By: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+            git push
+          fi
 
       - name: Run Tests
         run: poetry run pytest -v --cov=src --cov-report=xml
