@@ -92,9 +92,13 @@ class TestSearchStudies:
         """Test that search_studies returns a list."""
         mock_response = Mock()
         mock_response.data = []
-        mock_supabase_client.table.return_value.select.return_value.limit.return_value.execute.return_value = (
-            mock_response
-        )
+        mock_response.count = 0
+
+        query_mock = Mock()
+        query_mock.limit.return_value = query_mock
+        query_mock.offset.return_value = query_mock
+        query_mock.execute.return_value = mock_response
+        mock_supabase_client.table.return_value.select.return_value = query_mock
 
         with patch("sage.database.get_supabase_client", return_value=mock_supabase_client):
             results = search_studies()
@@ -104,9 +108,13 @@ class TestSearchStudies:
         """Test search_studies with organism filter."""
         mock_response = Mock()
         mock_response.data = [{"id": 1, "organism": "Homo sapiens"}]
+        mock_response.count = 1
 
         query_mock = Mock()
-        query_mock.eq.return_value.limit.return_value.execute.return_value = mock_response
+        query_mock.eq.return_value = query_mock
+        query_mock.limit.return_value = query_mock
+        query_mock.offset.return_value = query_mock
+        query_mock.execute.return_value = mock_response
         mock_supabase_client.table.return_value.select.return_value = query_mock
 
         with patch("sage.database.get_supabase_client", return_value=mock_supabase_client):
@@ -119,23 +127,31 @@ class TestSearchStudies:
         """Test that search_studies respects limit parameter."""
         mock_response = Mock()
         mock_response.data = []
-        mock_supabase_client.table.return_value.select.return_value.limit.return_value.execute.return_value = (
-            mock_response
-        )
+        mock_response.count = 0
+
+        query_mock = Mock()
+        query_mock.limit.return_value = query_mock
+        query_mock.offset.return_value = query_mock
+        query_mock.execute.return_value = mock_response
+        mock_supabase_client.table.return_value.select.return_value = query_mock
 
         with patch("sage.database.get_supabase_client", return_value=mock_supabase_client):
             search_studies(limit=25)
 
-            # Verify limit was called
-            mock_supabase_client.table.return_value.select.return_value.limit.assert_called()
+            # Verify limit was called with 25
+            query_mock.limit.assert_called_with(25)
 
     def test_search_studies_handles_empty_results(self, mock_supabase_client):
         """Test search_studies handles empty results gracefully."""
         mock_response = Mock()
         mock_response.data = None
-        mock_supabase_client.table.return_value.select.return_value.limit.return_value.execute.return_value = (
-            mock_response
-        )
+        mock_response.count = 0
+
+        query_mock = Mock()
+        query_mock.limit.return_value = query_mock
+        query_mock.offset.return_value = query_mock
+        query_mock.execute.return_value = mock_response
+        mock_supabase_client.table.return_value.select.return_value = query_mock
 
         with patch("sage.database.get_supabase_client", return_value=mock_supabase_client):
             results = search_studies()
@@ -146,11 +162,13 @@ class TestSearchStudies:
         """Test search_studies with multiple filters applied."""
         mock_response = Mock()
         mock_response.data = [{"id": 1, "organism": "Homo sapiens", "has_sex_metadata": True}]
+        mock_response.count = 1
 
         query_mock = Mock()
-        eq_mock = Mock()
-        eq_mock.eq.return_value.limit.return_value.execute.return_value = mock_response
-        query_mock.eq.return_value = eq_mock
+        query_mock.eq.return_value = query_mock
+        query_mock.limit.return_value = query_mock
+        query_mock.offset.return_value = query_mock
+        query_mock.execute.return_value = mock_response
         mock_supabase_client.table.return_value.select.return_value = query_mock
 
         with patch("sage.database.get_supabase_client", return_value=mock_supabase_client):
