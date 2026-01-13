@@ -46,7 +46,11 @@ jobs:
         run: poetry run ruff check . --fix
 
       - name: Commit auto-fixed files
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          git config --global credential.helper store
+          echo "https://x-access-token:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
@@ -57,7 +61,7 @@ jobs:
             # Handle detached HEAD on pull requests
             if [ -z "$GITHUB_HEAD_REF" ]; then
               # Push branch on regular push
-              git push
+              git push origin main
             else
               # Push to PR branch on pull request
               git push origin HEAD:$GITHUB_HEAD_REF
