@@ -86,7 +86,7 @@ with st.container():
         st.session_state.has_sex_meta_filter = True if has_sex_metadata else None
 
     with col5:
-        if st.button("Clear Filters", use_container_width=True):
+        if st.button("Clear Filters", width="stretch"):
             st.session_state.search_query = ""
             st.session_state.selected_organism = None
             st.session_state.selected_study_type = None
@@ -143,7 +143,7 @@ try:
         st.subheader("Study Results")
         st.dataframe(
             df,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             column_config={
                 "Accession": st.column_config.TextColumn(width="medium"),
@@ -161,7 +161,7 @@ try:
 
         with col1:
             if st.session_state.page_number > 0:
-                if st.button("← Previous", use_container_width=True):
+                if st.button("← Previous", width="stretch"):
                     st.session_state.page_number -= 1
                     st.rerun()
             else:
@@ -173,7 +173,7 @@ try:
 
         with col3:
             if len(studies) == 50 and (st.session_state.page_number + 1) * 50 < total_results:
-                if st.button("Next →", use_container_width=True):
+                if st.button("Next →", width="stretch"):
                     st.session_state.page_number += 1
                     st.rerun()
             else:
