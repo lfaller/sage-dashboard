@@ -2,4 +2,4 @@
 - don't use fancy unicode or too many emoji characters
 - use test driven development where it makes sense
 - the project is managed with poetry
-- for a new piece of work, then groups file changes logically and give them appropriate commit messages, then submit for a PR
+- for a new piece of work, check out a new branch, then groups file changes logically and give them appropriate commit messages, then submit for a PR
