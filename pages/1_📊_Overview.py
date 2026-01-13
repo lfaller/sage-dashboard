@@ -85,7 +85,7 @@ try:
             text="Completeness %",
         )
         fig_organism.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
-        st.plotly_chart(fig_organism, use_container_width=True)
+        st.plotly_chart(fig_organism, width="stretch")
     else:
         st.info("No studies found in database")
 except Exception as e:
@@ -131,7 +131,7 @@ try:
             text="Completeness %",
         )
         fig_disease.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
-        st.plotly_chart(fig_disease, use_container_width=True)
+        st.plotly_chart(fig_disease, width="stretch")
 
 except Exception as e:
     st.error(f"Error fetching disease data: {e}")
