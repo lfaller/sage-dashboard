@@ -51,17 +51,33 @@ with st.container():
         selected_organism = st.selectbox(
             "Filter by organism",
             ["All"] + organisms,
-            index=0 if st.session_state.selected_organism is None else (organisms.index(st.session_state.selected_organism) + 1 if st.session_state.selected_organism in organisms else 0),
+            index=0
+            if st.session_state.selected_organism is None
+            else (
+                organisms.index(st.session_state.selected_organism) + 1
+                if st.session_state.selected_organism in organisms
+                else 0
+            ),
         )
-        st.session_state.selected_organism = None if selected_organism == "All" else selected_organism
+        st.session_state.selected_organism = (
+            None if selected_organism == "All" else selected_organism
+        )
 
     with col3:
         selected_study_type = st.selectbox(
             "Filter by study type",
             ["All"] + study_types,
-            index=0 if st.session_state.selected_study_type is None else (study_types.index(st.session_state.selected_study_type) + 1 if st.session_state.selected_study_type in study_types else 0),
+            index=0
+            if st.session_state.selected_study_type is None
+            else (
+                study_types.index(st.session_state.selected_study_type) + 1
+                if st.session_state.selected_study_type in study_types
+                else 0
+            ),
         )
-        st.session_state.selected_study_type = None if selected_study_type == "All" else selected_study_type
+        st.session_state.selected_study_type = (
+            None if selected_study_type == "All" else selected_study_type
+        )
 
     col4, col5 = st.columns([2, 1])
 
@@ -112,7 +128,8 @@ try:
             display_data.append(
                 {
                     "Accession": study.get("geo_accession", ""),
-                    "Title": study.get("title", "")[:60] + ("..." if len(study.get("title", "")) > 60 else ""),
+                    "Title": study.get("title", "")[:60]
+                    + ("..." if len(study.get("title", "")) > 60 else ""),
                     "Organism": study.get("organism", ""),
                     "Study Type": study.get("study_type", ""),
                     "Samples": study.get("sample_count", 0),
