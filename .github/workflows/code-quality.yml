@@ -13,6 +13,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -51,7 +54,14 @@ jobs:
             echo "No formatting changes needed"
           else
             git commit -m "style: auto-format code with Black and Ruff" -m "Apply Black formatting and fix Ruff linting issues with --fix flag" -m "Co-Authored-By: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
-            git push
+            # Handle detached HEAD on pull requests
+            if [ -z "$GITHUB_HEAD_REF" ]; then
+              # Push branch on regular push
+              git push
+            else
+              # Push to PR branch on pull request
+              git push origin HEAD:$GITHUB_HEAD_REF
+            fi
           fi
 
       - name: Run Tests
