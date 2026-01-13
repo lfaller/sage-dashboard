@@ -17,3 +17,40 @@ A free, open-source dashboard that:
 * Identifies datasets where sex can be computationally inferred from expression data
 * Prioritizes opportunities for reanalysis by disease relevance and clinical impact
 * Tracks progress over time to measure community improvement
+
+---
+
+## Quick Start
+
+### Run the Dashboard
+
+```bash
+poetry install
+poetry run streamlit run app.py
+```
+
+Visit: http://localhost:8501
+
+### Run Tests
+
+```bash
+poetry run pytest -v
+```
+
+---
+
+## Development
+
+- **[QUICKSTART.md](QUICKSTART.md)** - Quick reference for common commands
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Full development guide with TDD workflow
+- **[.github/CONTRIBUTING.md](.github/CONTRIBUTING.md)** - Contribution guidelines
+
+### Technology Stack
+
+- **Frontend:** Streamlit (Python-native dashboard)
+- **Backend:** Python 3.11+
+- **Database:** Supabase (PostgreSQL) - coming soon
+- **Testing:** pytest with 100% coverage
+- **Code Quality:** Black, Ruff
+- **Dependency Management:** Poetry
+- **CI/CD:** GitHub Actions
