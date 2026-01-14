@@ -259,7 +259,7 @@ def get_study_by_accession(accession: str) -> Optional[dict]:
     return studies[0] if studies else None
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=300)  # Reduced TTL to 5 minutes for more frequent updates
 def fetch_disease_stats() -> dict:
     """
     Fetch disease-related statistics from database.
@@ -291,13 +291,49 @@ def fetch_disease_stats() -> dict:
         )
         total_study_mappings = diseases_response.count or 0
 
+        logger.debug(
+            f"Disease stats: total_diseases={total_diseases}, total_study_mappings={total_study_mappings}"
+        )
+
         # Get diseases with studies (non-zero study count)
         # We'll count distinct diseases that have at least one study mapping
         diseases_with_studies = total_diseases
 
-        # Get average completeness
-        # This would require a JOIN in Supabase, so we'll estimate from available data
+        # Get average completeness by fetching study data for mapped studies
         avg_completeness = 0.0
+        if total_study_mappings > 0:
+            # Get unique study IDs from disease mappings
+            study_ids_response = client.table("disease_mappings").select("study_id").execute()
+            unique_study_ids = list(
+                set(item.get("study_id") for item in (study_ids_response.data or []))
+            )
+
+            logger.debug(f"Found {len(unique_study_ids)} unique studies with disease mappings")
+
+            if unique_study_ids:
+                # Fetch completeness for those studies
+                studies_response = (
+                    client.table("studies")
+                    .select("sex_metadata_completeness")
+                    .in_("id", unique_study_ids)
+                    .execute()
+                )
+                completeness_values = [
+                    item.get("sex_metadata_completeness", 0)
+                    for item in (studies_response.data or [])
+                ]
+
+                logger.debug(
+                    f"Fetched {len(completeness_values)} completeness values: {completeness_values}"
+                )
+
+                if completeness_values:
+                    avg_completeness = sum(completeness_values) / len(completeness_values)
+                    logger.debug(f"Calculated avg_completeness: {avg_completeness}")
+
+        logger.debug(
+            f"Returning disease stats: {{'total_diseases': {total_diseases}, 'diseases_with_studies': {diseases_with_studies}, 'avg_completeness': {avg_completeness}, 'total_study_mappings': {total_study_mappings}}}"
+        )
 
         return {
             "total_diseases": total_diseases,
@@ -508,7 +544,7 @@ def get_rescue_opportunities(
         limit: Maximum results (default 100)
 
     Returns:
-        List of rescue opportunity studies with rescue_score, sorted descending
+        List of rescue opportunity studies with rescue_score and disease info, sorted descending
 
     Raises:
         Exception: If database query fails
@@ -554,8 +590,27 @@ def get_rescue_opportunities(
 
         logger.debug(f"Database query returned {len(studies)} studies")
 
-        # Calculate rescue scores
+        # Fetch disease mappings for all studies
+        study_ids = [s["id"] for s in studies]
+        disease_mapping = {}
+        if study_ids:
+            disease_response = (
+                client.table("disease_mappings")
+                .select("study_id, disease_term")
+                .in_("study_id", study_ids)
+                .execute()
+            )
+            for mapping in disease_response.data or []:
+                study_id = mapping.get("study_id")
+                disease_term = mapping.get("disease_term")
+                if study_id not in disease_mapping:
+                    disease_mapping[study_id] = []
+                if disease_term:
+                    disease_mapping[study_id].append(disease_term)
+
+        # Add disease info to studies and calculate rescue scores
         for study in studies:
+            study["disease_terms"] = ", ".join(disease_mapping.get(study["id"], []))
             study["rescue_score"] = calculate_rescue_score(study)
 
         # Filter by disease category if specified

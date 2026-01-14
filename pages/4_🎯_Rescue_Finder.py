@@ -137,6 +137,7 @@ try:
             hover_data=[
                 "title",
                 "organism",
+                "disease_terms",
                 "study_type",
                 "sample_count",
                 "rescue_score",
@@ -145,6 +146,7 @@ try:
                 "geo_accession": "Study Accession",
                 "rescue_score": "Rescue Score",
                 "sex_inference_confidence": "Inference Confidence",
+                "disease_terms": "Disease",
             },
             color_continuous_scale="Viridis",
         )
@@ -165,6 +167,7 @@ try:
                 "Type": o.get("study_type", ""),
                 "Samples": o.get("sample_count", 0),
                 "Organism": o.get("organism", ""),
+                "Disease": o.get("disease_terms", ""),
                 "Inference Confidence": f"{o.get('sex_inference_confidence', 0):.2f}",
                 "Rescue Score": f"{o.get('rescue_score', 0):.3f}",
             }

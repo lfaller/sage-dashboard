@@ -1,17 +1,20 @@
 # SAGE Dashboard Development Roadmap
 
-## Current Status: Phase 2 Complete ✅
+## Current Status: Phase 4A Complete ✅
 
 **What's Done:**
 - ✅ MVP: Poetry setup, CI/CD pipeline, core metrics module
 - ✅ Phase 1A: Supabase integration, study database functions
 - ✅ Phase 1B: Study Search page with advanced filtering & pagination
 - ✅ Phase 2: Disease Explorer with disease mapping & drill-down
-- ✅ 55 tests passing (88% coverage)
+- ✅ Phase 3: Sex inference system with Rescue Finder page
+- ✅ Phase 4A: Real GEO data integration with GEOparse
+- ✅ 124 tests passing (94% coverage)
 - ✅ Automated code quality (Black + Ruff)
 - ✅ CHANGELOG.md tracking
+- ✅ Centralized logging configuration
 
-**Next Steps:** Phase 3 - Sex Inference
+**Next Steps:** Phase 4B - Automated Entrez API querying, Phase 5 - Progress Tracking & Trends
 
 ---
 
@@ -192,7 +195,73 @@ Identify studies where sex can be inferred from expression data
 
 ---
 
-## Phase 4: Progress Tracking (After 3)
+## Phase 4A: Real GEO Data Integration ✅ Complete
+
+### Goal
+Load real genomic study data from NCBI GEO using GEOparse (replaced synthetic demo data)
+
+### What Was Done
+- ✅ Added GEOparse dependency (^2.0.4)
+- ✅ Created `src/sage/geo_fetcher.py` with RateLimiter and NCBI compliance
+- ✅ Implemented sex metadata detection from sample names (study-level)
+- ✅ Created `scripts/fetch_geo_studies.py` CLI with:
+  - 55+ curated human RNA-seq studies from NCBI GEO
+  - `--dry-run` for testing without database writes
+  - `--skip-existing` for resumable/incremental fetches
+  - Configurable rate limiting (default 2 req/sec)
+  - Automatic sex inferrability calculation
+- ✅ Comprehensive test suite: 25 new tests for geo_fetcher
+- ✅ 100% test coverage for core rate limiting and fetching logic
+- ✅ Integration with existing Study dataclass and sex inference pipeline
+- ✅ Proper logging with centralized logger (no print statements)
+
+### How to Use
+```bash
+# Test with 5 studies (no database writes)
+poetry run python scripts/fetch_geo_studies.py --dry-run --limit 5
+
+# Fetch 50 real studies into database
+poetry run python scripts/fetch_geo_studies.py --limit 50
+
+# Resume with skip-existing (fetch only new studies)
+poetry run python scripts/fetch_geo_studies.py --skip-existing --limit 200
+
+# High rate limit (requires NCBI API key)
+poetry run python scripts/fetch_geo_studies.py --rate-limit 8.0
+```
+
+### Key Features
+- **Rate Limiting**: NCBI-compliant (default 2 req/sec, configurable up to 10)
+- **Resilience**: Retries failed studies with exponential backoff
+- **Progress Tracking**: Shows real-time progress and summary statistics
+- **Sex Metadata Detection**: Analyzes sample names for M/F patterns
+- **Dry-Run Support**: Test without modifying database
+- **Resumable**: Skip already-fetched studies with `--skip-existing`
+
+### MVP Design Decisions
+- **Curated Accession List**: Start with known human RNA-seq studies (Phase 4B will add automated Entrez querying)
+- **Study-Level Only**: No full sample data download (Phase 4B enhancement)
+- **GEOparse Library**: Purpose-built for GEO, handles parsing automatically
+
+---
+
+## Phase 4B: Automated Entrez API Querying (Future)
+
+### Goal
+Replace curated accession list with automated NCBI Entrez queries
+
+### Planned Tasks
+- [ ] Use Biopython Entrez module for automated GEO searches
+- [ ] Query: human organism, RNA-seq type, date range (2021-2026)
+- [ ] Paginate through results automatically
+- [ ] Support incremental updates (fetch only new studies since last run)
+- [ ] Track query metadata for reproducibility
+
+**Time:** ~2 hours
+
+---
+
+## Phase 5: Progress Tracking (After 4A)
 
 ### Goal
 Historical snapshots to measure community improvement
