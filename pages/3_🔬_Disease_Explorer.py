@@ -10,9 +10,7 @@ from sage.database import (
     get_disease_categories,
 )
 
-st.set_page_config(
-    page_title="Disease Explorer | SAGE", page_icon="🔬", layout="wide"
-)
+st.set_page_config(page_title="Disease Explorer | SAGE", page_icon="🔬", layout="wide")
 
 st.title("🔬 Disease Explorer")
 st.markdown(
@@ -185,19 +183,11 @@ try:
                         {
                             "Accession": s.get("geo_accession", ""),
                             "Title": s.get("title", "")[:60]
-                            + (
-                                "..."
-                                if len(s.get("title", "")) > 60
-                                else ""
-                            ),
+                            + ("..." if len(s.get("title", "")) > 60 else ""),
                             "Organism": s.get("organism", ""),
                             "Samples": s.get("sample_count", 0),
                             "Sex Metadata %": f"{(s.get('sex_metadata_completeness', 0) or 0) * 100:.1f}%",
-                            "Has Analysis": (
-                                "✓"
-                                if s.get("reports_sex_analysis")
-                                else "✗"
-                            ),
+                            "Has Analysis": ("✓" if s.get("reports_sex_analysis") else "✗"),
                         }
                         for s in studies
                     ]
