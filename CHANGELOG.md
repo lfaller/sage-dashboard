@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-01-14
+
+### Added
+- Centralized logging configuration module (`src/sage/logging_config.py`)
+
+### Changed
+- Refactored debug output from print statements to proper Python logging module
+- Updated `get_rescue_opportunities()` to use logger instead of stderr printing
+- Improved debugging experience with consistent log format and levels
+
 ## [0.3.0] - 2026-01-14
 
 ### Added
