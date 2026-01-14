@@ -185,22 +185,40 @@ class TestGetRescueOpportunities:
 
     def test_returns_list_of_dicts(self, mock_supabase_client):
         """Test that get_rescue_opportunities returns a list of dicts."""
-        mock_response = Mock()
-        mock_response.data = [
+        # Mock studies response
+        studies_response = Mock()
+        studies_response.data = [
             {
                 "id": 1,
                 "geo_accession": "GSE123001",
                 "sex_inferrable": True,
                 "sex_inference_confidence": 0.8,
+                "title": "Test Study",
+                "organism": "Homo sapiens",
+                "study_type": "RNA-seq",
+                "sample_count": 30,
+                "has_sex_metadata": False,
+                "sex_metadata_completeness": 0.0,
             }
         ]
-        mock_response.count = 1
+        studies_response.count = 1
+
+        # Mock disease mappings response
+        disease_response = Mock()
+        disease_response.data = [{"study_id": 1}]
+
+        # Mock study completeness response
+        completeness_response = Mock()
+        completeness_response.data = [{"sex_metadata_completeness": 0.0}]
 
         query_mock = Mock()
         query_mock.eq.return_value = query_mock
         query_mock.gte.return_value = query_mock
+        query_mock.neq.return_value = query_mock
+        query_mock.gt.return_value = query_mock
+        query_mock.in_.return_value = query_mock
         query_mock.limit.return_value = query_mock
-        query_mock.execute.return_value = mock_response
+        query_mock.execute.side_effect = [studies_response, disease_response, completeness_response]
         mock_supabase_client.table.return_value.select.return_value = query_mock
 
         with patch("sage.database.get_supabase_client", return_value=mock_supabase_client):
@@ -209,6 +227,7 @@ class TestGetRescueOpportunities:
             assert isinstance(results, list)
             assert len(results) > 0
             assert isinstance(results[0], dict)
+            assert "disease_terms" in results[0]
 
     def test_filters_by_organism(self, mock_supabase_client):
         """Test filtering by organism."""
