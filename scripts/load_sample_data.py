@@ -19,11 +19,16 @@ from sage.data_loader import (  # noqa: E402
 
 
 def create_sample_studies() -> list[Study]:
-    """Create sample study data for demonstration."""
+    """Create sample study data for demonstration.
+
+    NOTE: These are synthetic study records created for testing/demo purposes.
+    The accession IDs do NOT correspond to real GEO studies. Using a special
+    prefix (DEMO-) to clearly distinguish from real data.
+    """
     studies = [
         # Human RNA-seq studies
         Study(
-            geo_accession="GSE123001",
+            geo_accession="DEMO-001",
             title="Breast cancer transcriptome profiling",
             summary="RNA-seq analysis of breast cancer samples",
             organism="Homo sapiens",
@@ -34,7 +39,7 @@ def create_sample_studies() -> list[Study]:
             sex_metadata_completeness=0.92,
         ),
         Study(
-            geo_accession="GSE123002",
+            geo_accession="DEMO-002",
             title="Cardiac remodeling in heart failure",
             organism="Homo sapiens",
             platform="Illumina NovaSeq",
@@ -44,7 +49,7 @@ def create_sample_studies() -> list[Study]:
             sex_metadata_completeness=0.0,
         ),
         Study(
-            geo_accession="GSE123003",
+            geo_accession="DEMO-003",
             title="Systemic lupus erythematosus patient cohort",
             summary="Transcriptome study of SLE patients vs controls",
             organism="Homo sapiens",
@@ -55,7 +60,7 @@ def create_sample_studies() -> list[Study]:
             sex_metadata_completeness=0.78,
         ),
         Study(
-            geo_accession="GSE123004",
+            geo_accession="DEMO-004",
             title="Type 2 diabetes gene expression analysis",
             organism="Homo sapiens",
             platform="Affymetrix",
@@ -65,7 +70,7 @@ def create_sample_studies() -> list[Study]:
             sex_metadata_completeness=0.85,
         ),
         Study(
-            geo_accession="GSE123005",
+            geo_accession="DEMO-005",
             title="Rheumatoid arthritis synovial tissue",
             organism="Homo sapiens",
             platform="Illumina HiSeq",
@@ -76,7 +81,7 @@ def create_sample_studies() -> list[Study]:
         ),
         # Mouse studies
         Study(
-            geo_accession="GSE123006",
+            geo_accession="DEMO-006",
             title="Immunological response in mice",
             organism="Mus musculus",
             platform="Illumina HiSeq",
@@ -86,7 +91,7 @@ def create_sample_studies() -> list[Study]:
             sex_metadata_completeness=1.0,
         ),
         Study(
-            geo_accession="GSE123007",
+            geo_accession="DEMO-007",
             title="Mouse kidney transcriptomics",
             organism="Mus musculus",
             platform="Agilent",
@@ -97,7 +102,7 @@ def create_sample_studies() -> list[Study]:
         ),
         # Additional human studies
         Study(
-            geo_accession="GSE123008",
+            geo_accession="DEMO-008",
             title="Depression biomarkers in blood",
             organism="Homo sapiens",
             platform="Illumina NovaSeq",
@@ -107,7 +112,7 @@ def create_sample_studies() -> list[Study]:
             sex_metadata_completeness=0.67,
         ),
         Study(
-            geo_accession="GSE123009",
+            geo_accession="DEMO-009",
             title="Prostate cancer methylation analysis",
             organism="Homo sapiens",
             platform="Illumina HiSeq",
@@ -117,7 +122,7 @@ def create_sample_studies() -> list[Study]:
             sex_metadata_completeness=0.95,
         ),
         Study(
-            geo_accession="GSE123010",
+            geo_accession="DEMO-010",
             title="Atherosclerosis risk markers",
             organism="Homo sapiens",
             platform="Illumina HiSeq",
