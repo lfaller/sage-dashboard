@@ -5,6 +5,10 @@ from typing import Optional
 import streamlit as st
 from supabase import create_client, Client
 
+from sage.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 
 @st.cache_resource
 def get_supabase_client() -> Client:
@@ -509,12 +513,10 @@ def get_rescue_opportunities(
     Raises:
         Exception: If database query fails
     """
-    import sys
-
-    print(
-        f"[RESCUE] Called with: organism={organism}, disease={disease_category}, "
-        f"confidence={min_confidence}, sample_size={min_sample_size}",
-        file=sys.stderr,
+    logger.debug(
+        f"get_rescue_opportunities called with: organism={organism}, "
+        f"disease_category={disease_category}, min_confidence={min_confidence}, "
+        f"min_sample_size={min_sample_size}"
     )
 
     client = get_supabase_client()
@@ -531,20 +533,17 @@ def get_rescue_opportunities(
         query = query.eq("has_sex_metadata", False)
         query = query.eq("sex_inferrable", True)
 
-        print(
-            "[RESCUE] Applied core filters (has_sex_metadata=False, sex_inferrable=True)",
-            file=sys.stderr,
-        )
+        logger.debug("Applied core filters: has_sex_metadata=False, sex_inferrable=True")
 
         # Only apply confidence filter if > 0
         if min_confidence > 0.0:
             query = query.gte("sex_inference_confidence", min_confidence)
-            print(f"[RESCUE] Applied confidence filter: >= {min_confidence}", file=sys.stderr)
+            logger.debug(f"Applied confidence filter: >= {min_confidence}")
 
         # Only apply sample size filter if > 0
         if min_sample_size > 0:
             query = query.gte("sample_count", min_sample_size)
-            print(f"[RESCUE] Applied sample size filter: >= {min_sample_size}", file=sys.stderr)
+            logger.debug(f"Applied sample size filter: >= {min_sample_size}")
 
         # Optional organism filter
         if organism is not None:
@@ -553,7 +552,7 @@ def get_rescue_opportunities(
         response = query.limit(limit).execute()
         studies = response.data or []
 
-        print(f"[RESCUE] Query returned {len(studies)} studies", file=sys.stderr)
+        logger.debug(f"Database query returned {len(studies)} studies")
 
         # Calculate rescue scores
         for study in studies:
@@ -569,18 +568,16 @@ def get_rescue_opportunities(
             )
             disease_study_ids = {m["study_id"] for m in (disease_response.data or [])}
             studies = [s for s in studies if s["id"] in disease_study_ids]
+            logger.debug(f"Filtered to {len(studies)} studies by disease category")
 
         # Sort by rescue_score descending
         studies.sort(key=lambda x: x["rescue_score"], reverse=True)
 
-        print(f"[RESCUE] Returning {len(studies)} sorted studies", file=sys.stderr)
+        logger.debug(f"Returning {len(studies)} sorted rescue opportunities")
         return studies
 
     except Exception as e:
-        import traceback
-
-        print(f"[RESCUE] ERROR: {e}", file=sys.stderr)
-        print(f"[RESCUE] Traceback: {traceback.format_exc()}", file=sys.stderr)
+        logger.exception(f"Error fetching rescue opportunities: {e}")
         return []
 
 
