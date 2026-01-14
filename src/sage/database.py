@@ -523,7 +523,7 @@ def get_rescue_opportunities(
         query = client.table("studies").select(
             "id, geo_accession, title, organism, study_type, sample_count, "
             "has_sex_metadata, sex_metadata_completeness, sex_inferrable, "
-            "sex_inference_confidence, clinical_priority_score",
+            "sex_inference_confidence",
             count="exact",
         )
 
