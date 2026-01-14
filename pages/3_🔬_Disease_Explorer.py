@@ -48,7 +48,7 @@ try:
     with col3:
         st.metric(
             label="Avg Sex Metadata %",
-            value=f"{stats['avg_completeness']:.1f}%",
+            value=f"{stats['avg_completeness'] * 100:.1f}%",
         )
 
     with col4:
@@ -145,7 +145,7 @@ try:
                 "Disease": d["disease_term"],
                 "Category": d["disease_category"] or "Unknown",
                 "Studies": d["study_count"],
-                "Avg Completeness %": f"{d['avg_completeness']:.1f}%",
+                "Avg Completeness %": f"{d['avg_completeness'] * 100:.1f}%",
                 "Known Sex Diff": "✓" if d.get("known_sex_difference") else "✗",
                 "Priority Score": f"{d.get('avg_clinical_priority', 0):.2f}",
             }
