@@ -21,7 +21,6 @@ Usage:
 import sys
 import argparse
 from pathlib import Path
-from dataclasses import asdict
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -29,7 +28,6 @@ sys.path.insert(0, str(project_root))
 
 from sage.geo_fetcher import GEOFetcher  # noqa: E402
 from sage.data_loader import upsert_studies  # noqa: E402
-from sage.sex_inference import infer_from_metadata  # noqa: E402
 from sage.database import get_supabase_client  # noqa: E402
 from sage.logging_config import get_logger  # noqa: E402
 
@@ -191,14 +189,7 @@ def main():
         print("\n✗ No studies successfully fetched")
         return 1
 
-    # 4. Calculate sex inferrability
-    print(f"\nCalculating sex inferrability for {len(studies)} studies...")
-    for study in studies:
-        inference = infer_from_metadata(asdict(study))
-        study.sex_inferrable = inference["sex_inferrable"]
-        study.sex_inference_confidence = inference["sex_inference_confidence"]
-
-    # 5. Statistics
+    # 4. Statistics (sex inferrability already calculated during fetch)
     print("\n" + "=" * 70)
     print("SUMMARY")
     print("=" * 70)

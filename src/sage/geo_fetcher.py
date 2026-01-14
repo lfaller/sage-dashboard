@@ -16,7 +16,7 @@ from typing import Optional, List, Tuple
 import GEOparse
 
 from sage.data_loader import Study
-from sage.sex_inference import analyze_sample_names
+from sage.sex_inference import analyze_sample_names, calculate_confidence
 from sage.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -137,7 +137,19 @@ class GEOFetcher:
         # Extract basic metadata
         geo_accession = gse.name
         title = gse.metadata.get("title", ["Unknown"])[0]
+
+        # Organism: try multiple metadata fields
         organism = gse.metadata.get("organism", gse.metadata.get("organism_ch1", ["Unknown"]))[0]
+        if organism == "Unknown":
+            # Try taxid fields (9606 = human, 10090 = mouse, etc.)
+            taxid = gse.metadata.get("sample_taxid", gse.metadata.get("platform_taxid", [""])[0])[0]
+            if taxid == "9606":
+                organism = "Homo sapiens"
+            elif taxid == "10090":
+                organism = "Mus musculus"
+            elif taxid:
+                organism = f"taxid:{taxid}"
+
         sample_count = len(gse.gsms)
 
         # Optional fields
@@ -152,6 +164,11 @@ class GEOFetcher:
         # Detect sex metadata (study-level only)
         has_sex_metadata, sex_completeness = detect_sex_metadata_from_gse(gse)
 
+        # Calculate sex inferrability using full study context
+        sex_inferrable, inference_confidence = self._calculate_sex_inferrability(
+            gse, organism, sample_count, study_type, has_sex_metadata
+        )
+
         return Study(
             geo_accession=geo_accession,
             title=title,
@@ -164,6 +181,8 @@ class GEOFetcher:
             pubmed_id=pubmed_id,
             has_sex_metadata=has_sex_metadata,
             sex_metadata_completeness=sex_completeness,
+            sex_inferrable=sex_inferrable,
+            sex_inference_confidence=inference_confidence,
         )
 
     def _detect_study_type(self, gse) -> Optional[str]:
@@ -186,6 +205,58 @@ class GEOFetcher:
             return "microarray"
         else:
             return None
+
+    def _calculate_sex_inferrability(
+        self,
+        gse,
+        organism: str,
+        sample_count: int,
+        study_type: Optional[str],
+        has_sex_metadata: bool,
+    ) -> Tuple[bool, float]:
+        """Calculate sex inferrability based on study characteristics.
+
+        Combines sample name analysis with study metadata to determine if sex can
+        be inferred from expression data (future phase).
+
+        Args:
+            gse: GEOparse GSE object
+            organism: Organism name
+            sample_count: Number of samples
+            study_type: Study type (RNA-seq, microarray, etc.)
+            has_sex_metadata: Whether sex metadata detected in sample names
+
+        Returns:
+            Tuple of (sex_inferrable: bool, confidence: float 0-1)
+        """
+        # Extract sample names for analysis
+        sample_names = []
+        for gsm_id in gse.gsms.keys():
+            try:
+                title = gse.gsms[gsm_id].metadata.get("title", [""])[0]
+                sample_names.append(title)
+            except Exception:
+                continue
+
+        # Analyze sample names for sex patterns
+        sample_analysis = analyze_sample_names(sample_names)
+
+        # Build factors dict for confidence calculation
+        factors = {
+            "is_rna_seq": study_type == "RNA-seq",
+            "sample_count": sample_count,
+            "has_sufficient_samples": sample_count >= 20,
+            "is_human": organism == "Homo sapiens",
+            "sample_name_confidence": sample_analysis["confidence"],
+            "sample_name_pattern": sample_analysis["pattern"],
+            "has_sex_metadata": has_sex_metadata,
+        }
+
+        # Calculate confidence using established formula
+        confidence = calculate_confidence(factors)
+        inferrable = confidence >= 0.5
+
+        return inferrable, confidence
 
 
 def detect_sex_metadata_from_gse(gse) -> Tuple[bool, float]:
