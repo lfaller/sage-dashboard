@@ -3,3 +3,7 @@
 - use test driven development where it makes sense
 - the project is managed with poetry
 - for a new piece of work, check out a new branch, then groups file changes logically and give them appropriate commit messages, then submit for a PR
+- make sure you document changes in the CHANGELOG.md in a concise manner
+- follow semver best practices for versioning
+- for every PR you do, check the README.md file and any other documentation to verify if they need updating
+- Don't just add to a documentation file, feel free to rewrite things or collapse sections if it leads to a more concise summary.

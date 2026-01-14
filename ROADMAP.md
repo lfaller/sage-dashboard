@@ -1,21 +1,21 @@
 # SAGE Dashboard Development Roadmap
 
-## Current Status: MVP Complete ✅
+## Current Status: Phase 2 Complete ✅
 
 **What's Done:**
-- ✅ Poetry project setup with TDD configuration
-- ✅ Pre-commit hooks (Black + Ruff automation)
-- ✅ GitHub Actions CI/CD pipeline
-- ✅ Core metrics module with 100% test coverage
-- ✅ Streamlit home page and overview dashboard
-- ✅ Mock data visualizations
-- ✅ Comprehensive documentation
+- ✅ MVP: Poetry setup, CI/CD pipeline, core metrics module
+- ✅ Phase 1A: Supabase integration, study database functions
+- ✅ Phase 1B: Study Search page with advanced filtering & pagination
+- ✅ Phase 2: Disease Explorer with disease mapping & drill-down
+- ✅ 55 tests passing (88% coverage)
+- ✅ Automated code quality (Black + Ruff)
+- ✅ CHANGELOG.md tracking
 
-**Next Steps:** Phase 1A - Database Integration
+**Next Steps:** Phase 3 - Sex Inference
 
 ---
 
-## Phase 1A: Database Integration (Next)
+## Phase 1A: Database Integration ✅ Complete
 
 ### Goal
 Connect to Supabase and load real (small sample) study data
@@ -92,10 +92,10 @@ def test_database_connection_error_handling()
 
 ---
 
-## Phase 1B: Study Search Page (After 1A)
+## Phase 1B: Study Search Page ✅ Complete
 
 ### Goal
-Enable users to search and filter studies
+Enable users to search and filter studies (COMPLETED)
 
 ### Tasks
 
@@ -133,10 +133,10 @@ Enable users to search and filter studies
 
 ---
 
-## Phase 2: Disease Mapping (After 1B)
+## Phase 2: Disease Mapping ✅ Complete
 
 ### Goal
-Categorize studies by disease and identify high-value opportunities
+Categorize studies by disease and identify high-value opportunities (COMPLETED)
 
 ### Tasks
 
