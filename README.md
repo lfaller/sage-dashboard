@@ -49,8 +49,8 @@ poetry run pytest -v
 
 - **Frontend:** Streamlit (Python-native dashboard)
 - **Backend:** Python 3.11+
-- **Database:** Supabase (PostgreSQL) - coming soon
-- **Testing:** pytest with 100% coverage
+- **Database:** Supabase (PostgreSQL) with REST API
+- **Testing:** pytest (55 tests, 88% coverage)
 - **Code Quality:** Black, Ruff
 - **Dependency Management:** Poetry
-- **CI/CD:** GitHub Actions
+- **CI/CD:** GitHub Actions with auto-formatting
