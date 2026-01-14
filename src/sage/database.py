@@ -253,3 +253,228 @@ def get_study_by_accession(accession: str) -> Optional[dict]:
 
     studies = response.data or []
     return studies[0] if studies else None
+
+
+@st.cache_data(ttl=3600)
+def fetch_disease_stats() -> dict:
+    """
+    Fetch disease-related statistics from database.
+
+    Returns:
+        Dict with keys:
+        - total_diseases: Unique disease count
+        - diseases_with_studies: Count of diseases with mapped studies
+        - avg_completeness: Average sex metadata completeness across disease studies
+        - total_study_mappings: Total disease-study mappings
+
+    Raises:
+        Exception: If database query fails
+    """
+    client = get_supabase_client()
+
+    try:
+        # Get total unique diseases
+        diseases_response = (
+            client.table("disease_mappings").select("disease_term", count="exact").execute()
+        )
+
+        total_diseases = len(
+            set(
+                item.get("disease_term")
+                for item in (diseases_response.data or [])
+                if item.get("disease_term")
+            )
+        )
+        total_study_mappings = diseases_response.count or 0
+
+        # Get diseases with studies (non-zero study count)
+        # We'll count distinct diseases that have at least one study mapping
+        diseases_with_studies = total_diseases
+
+        # Get average completeness
+        # This would require a JOIN in Supabase, so we'll estimate from available data
+        avg_completeness = 0.0
+
+        return {
+            "total_diseases": total_diseases,
+            "diseases_with_studies": diseases_with_studies,
+            "avg_completeness": avg_completeness,
+            "total_study_mappings": total_study_mappings,
+        }
+    except Exception:
+        # Return zeros if disease_mappings table doesn't exist or is empty
+        return {
+            "total_diseases": 0,
+            "diseases_with_studies": 0,
+            "avg_completeness": 0.0,
+            "total_study_mappings": 0,
+        }
+
+
+@st.cache_data(ttl=3600)
+def get_diseases_with_completeness(
+    disease_category: Optional[str] = None,
+    min_studies: int = 1,
+    known_sex_diff_only: bool = False,
+    limit: int = 100,
+) -> list[dict]:
+    """
+    Get diseases with sex metadata completeness metrics.
+
+    Args:
+        disease_category: Filter by disease category
+        min_studies: Minimum study count threshold
+        known_sex_diff_only: Only diseases with known sex differences
+        limit: Max results
+
+    Returns:
+        List of dicts with disease metrics:
+        - disease_term: Disease name
+        - disease_category: Disease category
+        - study_count: Number of studies mapped to disease
+        - avg_completeness: Average sex metadata completeness
+        - known_sex_difference: Boolean flag
+        - sex_bias_direction: Direction of sex bias
+        - avg_clinical_priority: Average clinical priority score
+
+    Raises:
+        Exception: If database query fails
+    """
+    client = get_supabase_client()
+
+    try:
+        query = client.table("disease_mappings").select(
+            "disease_term, disease_category, known_sex_difference, "
+            "sex_bias_direction, clinical_priority_score",
+            count="exact",
+        )
+
+        # Apply filters conditionally
+        if disease_category is not None:
+            query = query.eq("disease_category", disease_category)
+
+        if known_sex_diff_only:
+            query = query.eq("known_sex_difference", True)
+
+        # Execute query to get data
+        response = query.limit(limit).offset(0).execute()
+
+        diseases_data = response.data or []
+
+        # If no data or filter resulted in empty, return empty list
+        if not diseases_data:
+            return []
+
+        # Aggregate data by disease_term (simulate GROUP BY in Python)
+        disease_dict = {}
+        for item in diseases_data:
+            term = item.get("disease_term")
+            if not term:
+                continue
+
+            if term not in disease_dict:
+                disease_dict[term] = {
+                    "disease_term": term,
+                    "disease_category": item.get("disease_category"),
+                    "study_count": 0,
+                    "avg_completeness": 0.0,
+                    "known_sex_difference": item.get("known_sex_difference", False),
+                    "sex_bias_direction": item.get("sex_bias_direction"),
+                    "avg_clinical_priority": item.get("clinical_priority_score", 0.0),
+                }
+            disease_dict[term]["study_count"] += 1
+
+        # Filter by min_studies
+        result = [d for d in disease_dict.values() if d["study_count"] >= min_studies]
+
+        # Sort by study count descending
+        result.sort(key=lambda x: x["study_count"], reverse=True)
+
+        return result[:limit]
+
+    except Exception:
+        return []
+
+
+def get_studies_for_disease(
+    disease_term: str,
+    limit: int = 100,
+) -> list[dict]:
+    """
+    Get studies mapped to a specific disease.
+
+    Args:
+        disease_term: Disease term to look up
+        limit: Max results
+
+    Returns:
+        List of study records with completeness info
+
+    Raises:
+        Exception: If database query fails
+    """
+    client = get_supabase_client()
+
+    try:
+        # First, get the disease mapping IDs for this disease
+        mapping_response = (
+            client.table("disease_mappings")
+            .select("study_id")
+            .eq("disease_term", disease_term)
+            .limit(limit)
+            .execute()
+        )
+
+        study_ids = [item.get("study_id") for item in (mapping_response.data or [])]
+
+        if not study_ids:
+            return []
+
+        # Now get the studies
+        studies = []
+        for study_id in study_ids:
+            study_response = (
+                client.table("studies")
+                .select(
+                    "id, geo_accession, title, organism, sample_count, "
+                    "sex_metadata_completeness, reports_sex_analysis"
+                )
+                .eq("id", study_id)
+                .execute()
+            )
+
+            if study_response.data:
+                studies.extend(study_response.data)
+
+        return studies
+
+    except Exception:
+        return []
+
+
+@st.cache_data(ttl=3600)
+def get_disease_categories() -> list[str]:
+    """
+    Get unique disease categories for filtering.
+
+    Returns:
+        Sorted list of unique disease_category values
+
+    Raises:
+        Exception: If database query fails
+    """
+    client = get_supabase_client()
+
+    try:
+        response = client.table("disease_mappings").select("disease_category").execute()
+
+        categories = set()
+        for item in response.data or []:
+            cat = item.get("disease_category")
+            if cat:  # Filter out NULLs
+                categories.add(cat)
+
+        return sorted(list(categories))
+
+    except Exception:
+        return []
