@@ -1,6 +1,6 @@
 - be concise
 - don't use fancy unicode or too many emoji characters
-- use test driven development where it makes sense
+- use test driven development where it makes sense. It doesn't make sense to do this when streamlit's caching becomes a problem.
 - the project is managed with poetry
 - for a new piece of work, check out a new branch, then groups file changes logically and give them appropriate commit messages, then submit for a PR
 - make sure you document changes in the CHANGELOG.md in a concise manner
