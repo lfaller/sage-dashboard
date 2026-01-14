@@ -26,7 +26,7 @@ if "rescue_organism_filter" not in st.session_state:
 if "rescue_disease_filter" not in st.session_state:
     st.session_state.rescue_disease_filter = None
 if "rescue_min_confidence" not in st.session_state:
-    st.session_state.rescue_min_confidence = 0.5
+    st.session_state.rescue_min_confidence = 0.0
 if "rescue_selected_study" not in st.session_state:
     st.session_state.rescue_selected_study = None
 
@@ -101,7 +101,7 @@ try:
             "Minimum inference confidence",
             min_value=0.0,
             max_value=1.0,
-            value=0.5,
+            value=0.0,
             step=0.05,
         )
         st.session_state.rescue_min_confidence = min_confidence
