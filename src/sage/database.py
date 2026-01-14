@@ -509,6 +509,14 @@ def get_rescue_opportunities(
     Raises:
         Exception: If database query fails
     """
+    import sys
+
+    print(
+        f"[RESCUE] Called with: organism={organism}, disease={disease_category}, "
+        f"confidence={min_confidence}, sample_size={min_sample_size}",
+        file=sys.stderr,
+    )
+
     client = get_supabase_client()
 
     try:
@@ -523,13 +531,20 @@ def get_rescue_opportunities(
         query = query.eq("has_sex_metadata", False)
         query = query.eq("sex_inferrable", True)
 
+        print(
+            "[RESCUE] Applied core filters (has_sex_metadata=False, sex_inferrable=True)",
+            file=sys.stderr,
+        )
+
         # Only apply confidence filter if > 0
         if min_confidence > 0.0:
             query = query.gte("sex_inference_confidence", min_confidence)
+            print(f"[RESCUE] Applied confidence filter: >= {min_confidence}", file=sys.stderr)
 
         # Only apply sample size filter if > 0
         if min_sample_size > 0:
             query = query.gte("sample_count", min_sample_size)
+            print(f"[RESCUE] Applied sample size filter: >= {min_sample_size}", file=sys.stderr)
 
         # Optional organism filter
         if organism is not None:
@@ -537,6 +552,8 @@ def get_rescue_opportunities(
 
         response = query.limit(limit).execute()
         studies = response.data or []
+
+        print(f"[RESCUE] Query returned {len(studies)} studies", file=sys.stderr)
 
         # Calculate rescue scores
         for study in studies:
@@ -556,9 +573,14 @@ def get_rescue_opportunities(
         # Sort by rescue_score descending
         studies.sort(key=lambda x: x["rescue_score"], reverse=True)
 
+        print(f"[RESCUE] Returning {len(studies)} sorted studies", file=sys.stderr)
         return studies
 
-    except Exception:
+    except Exception as e:
+        import traceback
+
+        print(f"[RESCUE] ERROR: {e}", file=sys.stderr)
+        print(f"[RESCUE] Traceback: {traceback.format_exc()}", file=sys.stderr)
         return []
 
 
