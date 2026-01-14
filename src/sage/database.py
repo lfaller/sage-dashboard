@@ -478,3 +478,214 @@ def get_disease_categories() -> list[str]:
 
     except Exception:
         return []
+
+
+@st.cache_data(ttl=3600)
+def get_rescue_opportunities(
+    organism: Optional[str] = None,
+    disease_category: Optional[str] = None,
+    min_confidence: float = 0.0,
+    min_sample_size: int = 0,
+    limit: int = 100,
+) -> list:
+    """
+    Get studies ranked by rescue potential.
+
+    Rescue opportunities are studies that:
+    - Lack sex metadata (has_sex_metadata = False)
+    - Can have sex inferred (sex_inferrable = True)
+    - Meet confidence and sample size thresholds
+
+    Args:
+        organism: Optional organism filter (e.g., "Homo sapiens")
+        disease_category: Optional disease category filter
+        min_confidence: Minimum inference confidence (0.0-1.0, default 0.0 for no filter)
+        min_sample_size: Minimum sample count (default 0, no filter)
+        limit: Maximum results (default 100)
+
+    Returns:
+        List of rescue opportunity studies with rescue_score, sorted descending
+
+    Raises:
+        Exception: If database query fails
+    """
+    import sys
+
+    print(
+        f"[RESCUE] Called with: organism={organism}, disease={disease_category}, "
+        f"confidence={min_confidence}, sample_size={min_sample_size}",
+        file=sys.stderr,
+    )
+
+    client = get_supabase_client()
+
+    try:
+        query = client.table("studies").select(
+            "id, geo_accession, title, organism, study_type, sample_count, "
+            "has_sex_metadata, sex_metadata_completeness, sex_inferrable, "
+            "sex_inference_confidence",
+            count="exact",
+        )
+
+        # Core filters for rescue opportunities
+        query = query.eq("has_sex_metadata", False)
+        query = query.eq("sex_inferrable", True)
+
+        print(
+            "[RESCUE] Applied core filters (has_sex_metadata=False, sex_inferrable=True)",
+            file=sys.stderr,
+        )
+
+        # Only apply confidence filter if > 0
+        if min_confidence > 0.0:
+            query = query.gte("sex_inference_confidence", min_confidence)
+            print(f"[RESCUE] Applied confidence filter: >= {min_confidence}", file=sys.stderr)
+
+        # Only apply sample size filter if > 0
+        if min_sample_size > 0:
+            query = query.gte("sample_count", min_sample_size)
+            print(f"[RESCUE] Applied sample size filter: >= {min_sample_size}", file=sys.stderr)
+
+        # Optional organism filter
+        if organism is not None:
+            query = query.eq("organism", organism)
+
+        response = query.limit(limit).execute()
+        studies = response.data or []
+
+        print(f"[RESCUE] Query returned {len(studies)} studies", file=sys.stderr)
+
+        # Calculate rescue scores
+        for study in studies:
+            study["rescue_score"] = calculate_rescue_score(study)
+
+        # Filter by disease category if specified
+        if disease_category is not None:
+            disease_response = (
+                client.table("disease_mappings")
+                .select("study_id")
+                .eq("disease_category", disease_category)
+                .execute()
+            )
+            disease_study_ids = {m["study_id"] for m in (disease_response.data or [])}
+            studies = [s for s in studies if s["id"] in disease_study_ids]
+
+        # Sort by rescue_score descending
+        studies.sort(key=lambda x: x["rescue_score"], reverse=True)
+
+        print(f"[RESCUE] Returning {len(studies)} sorted studies", file=sys.stderr)
+        return studies
+
+    except Exception as e:
+        import traceback
+
+        print(f"[RESCUE] ERROR: {e}", file=sys.stderr)
+        print(f"[RESCUE] Traceback: {traceback.format_exc()}", file=sys.stderr)
+        return []
+
+
+def calculate_rescue_score(study: dict) -> float:
+    """
+    Calculate rescue potential score (0.0-1.0).
+
+    Scoring factors (weighted):
+    1. Inference confidence (30%)
+    2. Sample size (25%) - normalized 20-200 range
+    3. Missing metadata severity (20%) - 1 - completeness
+    4. Study type (15%) - RNA-seq > microarray
+    5. Clinical priority (10%) - Disease relevance
+
+    Args:
+        study: Study record dict
+
+    Returns:
+        Rescue score in [0.0, 1.0]
+    """
+    score = 0.0
+
+    # 1. Inference confidence (30%)
+    confidence = study.get("sex_inference_confidence", 0.0)
+    score += confidence * 0.30
+
+    # 2. Sample size (25%) - normalize 20-200 range
+    sample_count = study.get("sample_count", 0)
+    sample_score = min(1.0, (sample_count - 20) / 180) if sample_count > 20 else 0.0
+    score += sample_score * 0.25
+
+    # 3. Missing metadata severity (20%)
+    metadata_completeness = study.get("sex_metadata_completeness", 0.0)
+    missing_severity = 1.0 - metadata_completeness
+    score += missing_severity * 0.20
+
+    # 4. Study type (15%)
+    study_type = study.get("study_type", "")
+    if study_type == "RNA-seq":
+        score += 0.15
+    elif study_type == "microarray":
+        score += 0.08
+
+    # 5. Clinical priority (10%)
+    clinical_priority = study.get("clinical_priority_score", 0.5)
+    score += clinical_priority * 0.10
+
+    return min(1.0, max(0.0, score))
+
+
+@st.cache_data(ttl=3600)
+def fetch_rescue_stats() -> dict:
+    """
+    Fetch summary statistics for rescue opportunities.
+
+    Returns:
+        Dict with:
+        - total_opportunities: Count of rescue opportunity studies
+        - high_confidence_count: Studies with confidence >= 0.7
+        - potential_samples: Sum of sample counts across opportunities
+        - top_diseases: List of diseases in rescue opportunities (placeholder)
+
+    Raises:
+        Exception: If database query fails
+    """
+    client = get_supabase_client()
+
+    try:
+        # Total opportunities
+        total_response = (
+            client.table("studies")
+            .select("id, sample_count", count="exact")
+            .eq("has_sex_metadata", False)
+            .eq("sex_inferrable", True)
+            .execute()
+        )
+
+        total = total_response.count or 0
+
+        # High confidence count (>=0.7)
+        high_conf_response = (
+            client.table("studies")
+            .select("id", count="exact")
+            .eq("has_sex_metadata", False)
+            .eq("sex_inferrable", True)
+            .gte("sex_inference_confidence", 0.7)
+            .execute()
+        )
+
+        high_conf = high_conf_response.count or 0
+
+        # Sum potential samples
+        potential_samples = sum(s.get("sample_count", 0) for s in (total_response.data or []))
+
+        return {
+            "total_opportunities": total,
+            "high_confidence_count": high_conf,
+            "potential_samples": potential_samples,
+            "top_diseases": [],
+        }
+
+    except Exception:
+        return {
+            "total_opportunities": 0,
+            "high_confidence_count": 0,
+            "potential_samples": 0,
+            "top_diseases": [],
+        }

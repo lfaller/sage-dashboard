@@ -6,6 +6,9 @@ from sage.database import (
     fetch_overview_stats,
     search_studies,
     StudyFilter,
+    get_rescue_opportunities,
+    calculate_rescue_score,
+    fetch_rescue_stats,
 )
 
 
@@ -175,3 +178,328 @@ class TestSearchStudies:
             results = search_studies(organism="Homo sapiens", has_sex_metadata=True)
 
             assert len(results) == 1
+
+
+class TestGetRescueOpportunities:
+    """Tests for rescue opportunities fetching."""
+
+    def test_returns_list_of_dicts(self, mock_supabase_client):
+        """Test that get_rescue_opportunities returns a list of dicts."""
+        mock_response = Mock()
+        mock_response.data = [
+            {
+                "id": 1,
+                "geo_accession": "GSE123001",
+                "sex_inferrable": True,
+                "sex_inference_confidence": 0.8,
+            }
+        ]
+        mock_response.count = 1
+
+        query_mock = Mock()
+        query_mock.eq.return_value = query_mock
+        query_mock.gte.return_value = query_mock
+        query_mock.limit.return_value = query_mock
+        query_mock.execute.return_value = mock_response
+        mock_supabase_client.table.return_value.select.return_value = query_mock
+
+        with patch("sage.database.get_supabase_client", return_value=mock_supabase_client):
+            results = get_rescue_opportunities()
+
+            assert isinstance(results, list)
+            assert len(results) > 0
+            assert isinstance(results[0], dict)
+
+    def test_filters_by_organism(self, mock_supabase_client):
+        """Test filtering by organism."""
+        mock_response = Mock()
+        mock_response.data = [{"id": 1, "organism": "Homo sapiens"}]
+
+        query_mock = Mock()
+        query_mock.eq.return_value = query_mock
+        query_mock.gte.return_value = query_mock
+        query_mock.limit.return_value = query_mock
+        query_mock.execute.return_value = mock_response
+        mock_supabase_client.table.return_value.select.return_value = query_mock
+
+        with patch("sage.database.get_supabase_client", return_value=mock_supabase_client):
+            results = get_rescue_opportunities(organism="Homo sapiens")
+
+            assert isinstance(results, list)
+
+    def test_filters_by_min_confidence(self, mock_supabase_client):
+        """Test filtering by minimum confidence threshold."""
+        mock_response = Mock()
+        mock_response.data = []
+
+        query_mock = Mock()
+        query_mock.eq.return_value = query_mock
+        query_mock.gte.return_value = query_mock
+        query_mock.limit.return_value = query_mock
+        query_mock.execute.return_value = mock_response
+        mock_supabase_client.table.return_value.select.return_value = query_mock
+
+        with patch("sage.database.get_supabase_client", return_value=mock_supabase_client):
+            results = get_rescue_opportunities(min_confidence=0.7)
+
+            assert isinstance(results, list)
+
+    def test_filters_by_min_sample_size(self, mock_supabase_client):
+        """Test filtering by minimum sample size."""
+        mock_response = Mock()
+        mock_response.data = []
+
+        query_mock = Mock()
+        query_mock.eq.return_value = query_mock
+        query_mock.gte.return_value = query_mock
+        query_mock.limit.return_value = query_mock
+        query_mock.execute.return_value = mock_response
+        mock_supabase_client.table.return_value.select.return_value = query_mock
+
+        with patch("sage.database.get_supabase_client", return_value=mock_supabase_client):
+            results = get_rescue_opportunities(min_sample_size=30)
+
+            assert isinstance(results, list)
+
+    def test_filters_by_disease_category(self, mock_supabase_client):
+        """Test filtering by disease category."""
+        # Main query returns studies
+        studies_response = Mock()
+        studies_response.data = [{"id": 1, "sex_inference_confidence": 0.8}]
+
+        # Disease mapping query returns disease records
+        disease_response = Mock()
+        disease_response.data = [{"study_id": 1}]
+
+        query_mock = Mock()
+        query_mock.eq.return_value = query_mock
+        query_mock.gte.return_value = query_mock
+        query_mock.limit.return_value = query_mock
+        query_mock.execute.return_value = studies_response
+
+        disease_query = Mock()
+        disease_query.eq.return_value = disease_query
+        disease_query.execute.return_value = disease_response
+
+        def table_side_effect(table_name):
+            table_mock = Mock()
+            if table_name == "disease_mappings":
+                table_mock.select.return_value = disease_query
+            else:  # studies
+                table_mock.select.return_value = query_mock
+            return table_mock
+
+        mock_supabase_client.table.side_effect = table_side_effect
+
+        with patch("sage.database.get_supabase_client", return_value=mock_supabase_client):
+            results = get_rescue_opportunities(disease_category="cancer")
+
+            assert isinstance(results, list)
+
+    def test_respects_limit_parameter(self, mock_supabase_client):
+        """Test that limit parameter is respected."""
+        mock_response = Mock()
+        mock_response.data = []
+
+        query_mock = Mock()
+        query_mock.eq.return_value = query_mock
+        query_mock.gte.return_value = query_mock
+        query_mock.limit.return_value = query_mock
+        query_mock.execute.return_value = mock_response
+        mock_supabase_client.table.return_value.select.return_value = query_mock
+
+        with patch("sage.database.get_supabase_client", return_value=mock_supabase_client):
+            get_rescue_opportunities(limit=50)
+
+            query_mock.limit.assert_called_with(50)
+
+
+class TestCalculateRescueScore:
+    """Tests for rescue score calculation."""
+
+    def test_high_score_missing_metadata(self):
+        """Test high score when metadata is completely missing."""
+        study = {
+            "sex_inference_confidence": 0.8,
+            "sample_count": 100,
+            "sex_metadata_completeness": 0.0,  # Completely missing
+            "study_type": "RNA-seq",
+            "clinical_priority_score": 0.8,
+        }
+        score = calculate_rescue_score(study)
+
+        assert 0.0 <= score <= 1.0
+        assert score > 0.5  # Should be high due to missing metadata
+
+    def test_high_confidence_increases_score(self):
+        """Test that high inference confidence increases score."""
+        study_high = {
+            "sex_inference_confidence": 0.9,
+            "sample_count": 50,
+            "sex_metadata_completeness": 0.0,
+            "study_type": "microarray",
+            "clinical_priority_score": 0.5,
+        }
+        study_low = {
+            "sex_inference_confidence": 0.3,
+            "sample_count": 50,
+            "sex_metadata_completeness": 0.0,
+            "study_type": "microarray",
+            "clinical_priority_score": 0.5,
+        }
+
+        score_high = calculate_rescue_score(study_high)
+        score_low = calculate_rescue_score(study_low)
+
+        assert score_high > score_low
+
+    def test_large_sample_size_increases_score(self):
+        """Test that larger sample size increases score."""
+        study_large = {
+            "sex_inference_confidence": 0.5,
+            "sample_count": 200,
+            "sex_metadata_completeness": 0.0,
+            "study_type": "microarray",
+            "clinical_priority_score": 0.5,
+        }
+        study_small = {
+            "sex_inference_confidence": 0.5,
+            "sample_count": 20,
+            "sex_metadata_completeness": 0.0,
+            "study_type": "microarray",
+            "clinical_priority_score": 0.5,
+        }
+
+        score_large = calculate_rescue_score(study_large)
+        score_small = calculate_rescue_score(study_small)
+
+        assert score_large > score_small
+
+    def test_disease_priority_factor(self):
+        """Test that clinical priority factor affects score."""
+        study_high_priority = {
+            "sex_inference_confidence": 0.5,
+            "sample_count": 50,
+            "sex_metadata_completeness": 0.0,
+            "study_type": "microarray",
+            "clinical_priority_score": 0.9,
+        }
+        study_low_priority = {
+            "sex_inference_confidence": 0.5,
+            "sample_count": 50,
+            "sex_metadata_completeness": 0.0,
+            "study_type": "microarray",
+            "clinical_priority_score": 0.2,
+        }
+
+        score_high = calculate_rescue_score(study_high_priority)
+        score_low = calculate_rescue_score(study_low_priority)
+
+        assert score_high > score_low
+
+    def test_rna_seq_type_bonus(self):
+        """Test that RNA-seq study type gets bonus."""
+        study_rna = {
+            "sex_inference_confidence": 0.5,
+            "sample_count": 50,
+            "sex_metadata_completeness": 0.0,
+            "study_type": "RNA-seq",
+            "clinical_priority_score": 0.5,
+        }
+        study_array = {
+            "sex_inference_confidence": 0.5,
+            "sample_count": 50,
+            "sex_metadata_completeness": 0.0,
+            "study_type": "microarray",
+            "clinical_priority_score": 0.5,
+        }
+
+        score_rna = calculate_rescue_score(study_rna)
+        score_array = calculate_rescue_score(study_array)
+
+        assert score_rna > score_array
+
+    def test_score_normalization(self):
+        """Test that score is normalized to [0.0, 1.0]."""
+        study = {
+            "sex_inference_confidence": 1.0,
+            "sample_count": 500,  # Very large, could overflow if not normalized
+            "sex_metadata_completeness": 0.0,
+            "study_type": "RNA-seq",
+            "clinical_priority_score": 1.0,
+        }
+        score = calculate_rescue_score(study)
+
+        assert 0.0 <= score <= 1.0
+
+    def test_score_components_documented(self):
+        """Test that scoring formula components are transparent."""
+        # This test verifies that the function produces meaningful outputs
+        study = {
+            "sex_inference_confidence": 0.7,
+            "sample_count": 80,
+            "sex_metadata_completeness": 0.2,  # 20% complete, 80% missing
+            "study_type": "RNA-seq",
+            "clinical_priority_score": 0.7,
+        }
+        score = calculate_rescue_score(study)
+
+        # Should be reasonably high due to:
+        # - 0.7 confidence (30% weight)
+        # - Good sample size (25% weight)
+        # - 80% missing metadata (20% weight)
+        # - RNA-seq type (15% weight)
+        # - 0.7 clinical priority (10% weight)
+        assert score > 0.4
+
+
+class TestFetchRescueStats:
+    """Tests for rescue statistics."""
+
+    def test_returns_dict_with_required_keys(self, mock_supabase_client):
+        """Test that fetch_rescue_stats returns dict with required keys."""
+        # Mock responses for queries
+        mock_response1 = Mock()
+        mock_response1.data = []
+        mock_response1.count = 5
+
+        mock_response2 = Mock()
+        mock_response2.data = []
+        mock_response2.count = 5
+
+        query1_mock = Mock()
+        query1_mock.eq.return_value = query1_mock
+        query1_mock.execute.return_value = mock_response1
+
+        query2_mock = Mock()
+        query2_mock.eq.return_value = query2_mock
+        query2_mock.gte.return_value = query2_mock
+        query2_mock.execute.return_value = mock_response2
+
+        select1_mock = Mock()
+        select1_mock.eq.return_value = query1_mock
+
+        select2_mock = Mock()
+        select2_mock.eq.return_value = query2_mock
+
+        call_count = [0]
+
+        def table_side_effect(table_name):
+            table_mock = Mock()
+            if call_count[0] == 0:
+                table_mock.select.return_value = select1_mock
+                call_count[0] += 1
+            else:
+                table_mock.select.return_value = select2_mock
+            return table_mock
+
+        mock_supabase_client.table.side_effect = table_side_effect
+
+        with patch("sage.database.get_supabase_client", return_value=mock_supabase_client):
+            stats = fetch_rescue_stats()
+
+            assert isinstance(stats, dict)
+            assert "total_opportunities" in stats
+            assert "high_confidence_count" in stats
+            assert "potential_samples" in stats
+            assert "top_diseases" in stats

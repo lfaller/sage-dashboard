@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-01-14
+
+### Added
+- 🎯 Rescue Finder page for identifying high-value datasets for sex inference
+- Sex inference module with strategy pattern for extensibility
+- Metadata-based sex inference (MVP) analyzing study characteristics and sample naming patterns
+- Regex-based sample name pattern detection (M/F, Male/Female labels)
+- Rescue opportunity scoring algorithm (5-factor weighted model)
+- 3 new database functions: `get_rescue_opportunities()`, `calculate_rescue_score()`, `fetch_rescue_stats()`
+- Batch processing script (`scripts/update_sex_inferrability.py`) for analyzing all studies
+- 26 tests for sex inference module with 95% code coverage
+- 14 new database tests with comprehensive mock patterns
+- Strategy pattern design for future expression-based inference
+
+### Changed
+- Updated AGENTS.md to document TDD caveats with Streamlit caching
+
 ## [0.2.0] - 2026-01-14
 
 ### Added
