@@ -50,7 +50,33 @@ poetry run pytest -v
 - **Frontend:** Streamlit (Python-native dashboard)
 - **Backend:** Python 3.11+
 - **Database:** Supabase (PostgreSQL) with REST API
-- **Testing:** pytest (55 tests, 88% coverage)
+- **Data Source:** NCBI GEO (Gene Expression Omnibus) via GEOparse
+- **Testing:** pytest (124 tests, 94% coverage)
 - **Code Quality:** Black, Ruff
 - **Dependency Management:** Poetry
 - **CI/CD:** GitHub Actions with auto-formatting
+
+---
+
+## Data Sources
+
+SAGE Dashboard analyzes metadata from real genomic research studies:
+
+**NCBI Gene Expression Omnibus (GEO)**
+- Public repository of ~200,000 genomics datasets
+- Includes RNA-seq and microarray studies
+- **Current focus:** Human studies, RNA-seq (ideal for sex inference)
+
+**Data Loading**
+```bash
+# Load curated set of human RNA-seq studies
+poetry run python scripts/fetch_geo_studies.py --limit 50
+
+# Test with dry-run (no database writes)
+poetry run python scripts/fetch_geo_studies.py --dry-run --limit 5
+
+# Resume/update (skip existing studies)
+poetry run python scripts/fetch_geo_studies.py --skip-existing --limit 200
+```
+
+See [scripts/fetch_geo_studies.py](scripts/fetch_geo_studies.py) for details.
