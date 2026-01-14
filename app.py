@@ -24,8 +24,8 @@ identify opportunities to improve metadata quality and enable sex-aware analysis
 
 👈 Use the sidebar to explore:
 - 📊 **Overview** - Summary statistics on sex metadata completeness
-
-*More pages coming soon...*
+- 🔍 **Study Search** - Find and filter studies by organism, study type, and sex metadata
+- 🔬 **Disease Explorer** - Browse diseases and identify high-value reanalysis opportunities
 """
 )
 
