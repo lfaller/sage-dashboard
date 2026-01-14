@@ -484,7 +484,7 @@ def get_disease_categories() -> list[str]:
 def get_rescue_opportunities(
     organism: Optional[str] = None,
     disease_category: Optional[str] = None,
-    min_confidence: float = 0.5,
+    min_confidence: float = 0.0,
     min_sample_size: int = 0,
     limit: int = 100,
 ) -> list:
@@ -499,7 +499,7 @@ def get_rescue_opportunities(
     Args:
         organism: Optional organism filter (e.g., "Homo sapiens")
         disease_category: Optional disease category filter
-        min_confidence: Minimum inference confidence (0.0-1.0, default 0.5)
+        min_confidence: Minimum inference confidence (0.0-1.0, default 0.0 for no filter)
         min_sample_size: Minimum sample count (default 0, no filter)
         limit: Maximum results (default 100)
 
@@ -522,7 +522,10 @@ def get_rescue_opportunities(
         # Core filters for rescue opportunities
         query = query.eq("has_sex_metadata", False)
         query = query.eq("sex_inferrable", True)
-        query = query.gte("sex_inference_confidence", min_confidence)
+
+        # Only apply confidence filter if > 0
+        if min_confidence > 0.0:
+            query = query.gte("sex_inference_confidence", min_confidence)
 
         # Only apply sample size filter if > 0
         if min_sample_size > 0:
