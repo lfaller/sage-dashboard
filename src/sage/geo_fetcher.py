@@ -142,7 +142,8 @@ class GEOFetcher:
         organism = gse.metadata.get("organism", gse.metadata.get("organism_ch1", ["Unknown"]))[0]
         if organism == "Unknown":
             # Try taxid fields (9606 = human, 10090 = mouse, etc.)
-            taxid = gse.metadata.get("sample_taxid", gse.metadata.get("platform_taxid", [""])[0])[0]
+            taxid_list = gse.metadata.get("sample_taxid", gse.metadata.get("platform_taxid", [""]))
+            taxid = taxid_list[0] if taxid_list else ""
             if taxid == "9606":
                 organism = "Homo sapiens"
             elif taxid == "10090":
