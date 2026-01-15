@@ -51,6 +51,9 @@ class RateLimiter:
 class GEOFetcher:
     """Fetches study metadata from NCBI GEO database using GEOparse."""
 
+    # Allowed organisms for SAGE (sex metadata research focus)
+    ALLOWED_ORGANISMS = {"Homo sapiens", "Mus musculus"}
+
     def __init__(self, rate_limit: float = 2.0, use_cache: bool = True):
         """Initialize GEO fetcher.
 
@@ -70,7 +73,7 @@ class GEOFetcher:
             retry_count: Number of retries on failure (default: 3)
 
         Returns:
-            Study object or None if fetch failed
+            Study object or None if fetch failed or organism not allowed
         """
         logger.debug(f"Fetching {geo_accession}")
         self.rate_limiter.wait()
@@ -80,8 +83,11 @@ class GEOFetcher:
                 # Fetch using GEOparse
                 gse = GEOparse.get_GEO(geo_accession, destdir="./local/geo_cache", silent=True)
 
-                # Convert to Study object
+                # Convert to Study object (returns None if organism not allowed)
                 study = self._gse_to_study(gse)
+                if study is None:
+                    return None
+
                 logger.info(f"✓ Fetched {geo_accession}: {study.title[:50]}...")
                 return study
 
@@ -125,14 +131,14 @@ class GEOFetcher:
         logger.info(f"Successfully fetched {len(studies)}/{total} studies")
         return studies
 
-    def _gse_to_study(self, gse) -> Study:
+    def _gse_to_study(self, gse) -> Optional[Study]:
         """Convert GEOparse GSE object to Study dataclass.
 
         Args:
             gse: GEOparse GSE object
 
         Returns:
-            Study dataclass instance
+            Study dataclass instance, or None if organism is not allowed
         """
         # Extract basic metadata
         geo_accession = gse.name
@@ -150,6 +156,11 @@ class GEOFetcher:
                 organism = "Mus musculus"
             elif taxid:
                 organism = f"taxid:{taxid}"
+
+        # Filter: Only allow human and mouse studies
+        if organism not in self.ALLOWED_ORGANISMS:
+            logger.info(f"Skipping {geo_accession}: organism '{organism}' not in allowed list")
+            return None
 
         sample_count = len(gse.gsms)
 
