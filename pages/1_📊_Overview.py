@@ -71,8 +71,7 @@ try:
         }
 
         filtered_stats = {
-            org: stats for org, stats in organism_stats.items()
-            if org in organism_mapping
+            org: stats for org, stats in organism_stats.items() if org in organism_mapping
         }
 
         # Create dataframe
