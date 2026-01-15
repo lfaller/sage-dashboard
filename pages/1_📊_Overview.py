@@ -114,9 +114,7 @@ try:
     if rna_seq_studies:
         rna_seq_with_sex = sum(1 for s in rna_seq_studies if s.get("has_sex_metadata", False))
         rna_seq_total = len(rna_seq_studies)
-        rna_seq_pct = (
-            (rna_seq_with_sex / rna_seq_total * 100) if rna_seq_total > 0 else 0
-        )
+        rna_seq_pct = (rna_seq_with_sex / rna_seq_total * 100) if rna_seq_total > 0 else 0
 
         st.metric(
             label="RNA-seq Studies with Sex Metadata",
