@@ -1,21 +1,28 @@
 #!/usr/bin/env python3
 """Fetch studies from NCBI GEO and load into database.
 
-This script queries GEO for human RNA-seq studies from the last 5 years
-and populates the SAGE database with study metadata.
+This script queries GEO for human RNA-seq studies and populates the SAGE
+database with study metadata. Two modes are available:
+
+1. Curated List (default): Uses a manually curated list of ~50 studies
+2. Automated Search: Queries NCBI Entrez API for recent studies dynamically
 
 Usage:
+    # Curated list (default)
+    python scripts/fetch_geo_studies.py --limit 50
+
+    # Automated search: last 5 years of human RNA-seq
+    python scripts/fetch_geo_studies.py --search --limit 100
+
+    # Automated search: last 2 years of mouse RNA-seq
+    python scripts/fetch_geo_studies.py --search --organism "Mus musculus" \
+        --years-back 2 --limit 50
+
     # Dry run (test without inserting)
     python scripts/fetch_geo_studies.py --dry-run --limit 10
 
-    # Fetch 50 studies
-    python scripts/fetch_geo_studies.py --limit 50
-
     # Resume from previous run (skip existing)
     python scripts/fetch_geo_studies.py --skip-existing --limit 200
-
-    # With custom rate limit (for API key users)
-    python scripts/fetch_geo_studies.py --rate-limit 8.0 --limit 500
 """
 
 import sys
@@ -132,7 +139,38 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
-        "--limit", type=int, default=50, help="Maximum number of studies to fetch (default: 50)"
+        "--search",
+        action="store_true",
+        help="Use automated Entrez search instead of curated list",
+    )
+    parser.add_argument(
+        "--organism",
+        default="Homo sapiens",
+        choices=["Homo sapiens", "Mus musculus"],
+        help="Organism for automated search (default: Homo sapiens)",
+    )
+    parser.add_argument(
+        "--study-type",
+        default="RNA-seq",
+        choices=["RNA-seq", "microarray"],
+        help="Study type for automated search (default: RNA-seq)",
+    )
+    parser.add_argument(
+        "--years-back",
+        type=int,
+        default=5,
+        help="How many years back to search (default: 5)",
+    )
+    parser.add_argument(
+        "--email",
+        default="sage-dashboard@example.com",
+        help="Email for NCBI Entrez (required by API)",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Maximum number of studies to fetch (required for --search)",
     )
     parser.add_argument(
         "--dry-run", action="store_true", help="Test without inserting into database"
@@ -157,12 +195,42 @@ def main():
         print("[DRY RUN MODE - No database updates]")
 
     # 1. Get list of study accessions to fetch
-    study_ids = list(CURATED_HUMAN_RNASEQ_STUDIES)
+    if args.search:
+        # Automated Entrez search
+        if not args.limit:
+            print("Error: --limit is required when using --search")
+            return 1
 
-    if args.limit:
-        study_ids = study_ids[: args.limit]
+        from sage.entrez_searcher import EntrezSearcher  # noqa: E402
 
-    print(f"\nTarget: {len(study_ids)} studies from curated human RNA-seq list")
+        print("\n[Automated Search Mode]")
+        print(f"Organism: {args.organism}")
+        print(f"Study Type: {args.study_type}")
+        print(f"Years Back: {args.years_back}")
+        print(f"Max Results: {args.limit}")
+
+        searcher = EntrezSearcher(email=args.email, rate_limit=args.rate_limit)
+        study_ids = searcher.search_recent_studies(
+            organism=args.organism,
+            study_type=args.study_type,
+            years_back=args.years_back,
+            max_results=args.limit,
+        )
+
+        if not study_ids:
+            print("No studies found matching criteria")
+            return 1
+
+        print(f"Found {len(study_ids)} studies")
+    else:
+        # Curated list (default)
+        print("\n[Curated List Mode]")
+        study_ids = list(CURATED_HUMAN_RNASEQ_STUDIES)
+
+        if args.limit:
+            study_ids = study_ids[: args.limit]
+
+        print(f"Target: {len(study_ids)} studies from curated human RNA-seq list")
 
     # 2. Filter out existing studies if requested
     if args.skip_existing:

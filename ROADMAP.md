@@ -1,6 +1,6 @@
 # SAGE Dashboard Development Roadmap
 
-## Current Status: Phase 5 Complete ✅
+## Current Status: Phase 4B Complete ✅
 
 **What's Done:**
 - ✅ MVP: Poetry setup, CI/CD pipeline, core metrics module
@@ -9,14 +9,15 @@
 - ✅ Phase 2: Disease Explorer with disease mapping & drill-down
 - ✅ Phase 3: Sex inference system with Rescue Finder page
 - ✅ Phase 4A: Real GEO data integration with GEOparse
+- ✅ **Phase 4B: Automated Entrez API querying for dynamic study discovery**
 - ✅ Phase 5: Weekly progress tracking & Trends page with automation
-- ✅ 129 tests passing (89% coverage)
+- ✅ 139 tests passing (88% coverage)
 - ✅ Automated code quality (Black + Ruff)
 - ✅ CHANGELOG.md tracking
 - ✅ Centralized logging configuration
 - ✅ Streamlit Cloud deployment (live at https://sage-dashboard.streamlit.app)
 
-**Next Steps:** Phase 4B - Automated Entrez API querying, Phase 6 - Polish & Launch
+**Next Steps:** Phase 6 - Polish & Launch
 
 ---
 

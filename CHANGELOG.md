@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Phase 4B: Automated NCBI Entrez API querying for dynamic study discovery
+- `src/sage/entrez_searcher.py` - EntrezSearcher module for NCBI GEO searches with rolling 5-year window
+- Automated study discovery via `--search` flag in `scripts/fetch_geo_studies.py`
+- Support for organism and study type filtering in automated searches
+- 8 new tests for EntrezSearcher functionality (139 tests total, 88% coverage)
+
+### Changed
+- Updated `scripts/fetch_geo_studies.py` to support both curated list (default) and automated search modes
+- Enhanced fetch_geo_studies.py CLI with new arguments: `--search`, `--organism`, `--study-type`, `--years-back`, `--email`
+- Updated README.md with automated search examples
+- Updated ROADMAP.md to mark Phase 4B complete
+- Biopython (^1.84) added to dependencies for Entrez API access
+
+### Technical Details
+- EntrezSearcher reuses existing RateLimiter class (NCBI-compliant)
+- Converts GDS IDs (from Entrez) to GSE accessions (for GEOparse) automatically
+- Rolling 5-year date window updates automatically without manual configuration
+- Error handling for partial results: skips failed conversions and continues
+- Email address required for NCBI Entrez (defaults to sage-dashboard@example.com)
+
 ## [0.5.0] - 2026-01-15
 
 ### Added

@@ -86,6 +86,8 @@ SAGE Dashboard analyzes metadata from real genomic research studies:
 - **Current focus:** Human studies, RNA-seq (ideal for sex inference)
 
 **Data Loading**
+
+Option 1: **Curated List** (Default)
 ```bash
 # Load curated set of human RNA-seq studies
 poetry run python scripts/fetch_geo_studies.py --limit 50
@@ -95,6 +97,19 @@ poetry run python scripts/fetch_geo_studies.py --dry-run --limit 5
 
 # Resume/update (skip existing studies)
 poetry run python scripts/fetch_geo_studies.py --skip-existing --limit 200
+```
+
+Option 2: **Automated Search** (New! Uses NCBI Entrez API)
+```bash
+# Search last 5 years of human RNA-seq studies (100 studies max)
+poetry run python scripts/fetch_geo_studies.py --search --limit 100
+
+# Search last 2 years of mouse RNA-seq studies
+poetry run python scripts/fetch_geo_studies.py --search \
+    --organism "Mus musculus" --years-back 2 --limit 50
+
+# Dry run to test
+poetry run python scripts/fetch_geo_studies.py --search --limit 10 --dry-run
 ```
 
 See [scripts/fetch_geo_studies.py](scripts/fetch_geo_studies.py) for details.
