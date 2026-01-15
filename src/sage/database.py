@@ -741,3 +741,188 @@ def fetch_rescue_stats() -> dict:
             "potential_samples": 0,
             "top_diseases": [],
         }
+
+
+def create_snapshot(
+    disease_category: Optional[str] = None,
+    organism: Optional[str] = None,
+) -> dict:
+    """
+    Create a new completeness snapshot with current metrics.
+
+    Captures a snapshot of sex metadata completeness at a point in time,
+    optionally filtered by organism and/or disease category.
+
+    Args:
+        disease_category: Optional filter for disease category (e.g., "cancer")
+        organism: Optional filter for organism (e.g., "Homo sapiens")
+
+    Returns:
+        Dict with snapshot data including all metrics:
+        - snapshot_date: Date of snapshot (YYYY-MM-DD)
+        - total_studies: Total count of studies matching filters
+        - studies_with_sex_metadata: Count where sex_metadata_completeness > 0
+        - studies_sex_inferrable: Count where sex_inferrable = true
+        - studies_with_sex_analysis: Count where reports_sex_analysis = true
+        - avg_metadata_completeness: Average sex_metadata_completeness (0-1)
+        - disease_category: Filter used (or None)
+        - organism: Filter used (or None)
+
+    Raises:
+        Exception: If database operations fail
+    """
+    from datetime import date
+
+    client = get_supabase_client()
+
+    try:
+        # Build base query for studies
+        studies_query = client.table("studies").select("id, sex_metadata_completeness")
+
+        # Apply filters if provided
+        if organism:
+            studies_query = studies_query.eq("organism", organism)
+        if disease_category:
+            # Filter through disease_mappings if category specified
+            disease_response = (
+                client.table("disease_mappings")
+                .select("study_id")
+                .eq("disease_category", disease_category)
+                .execute()
+            )
+            disease_study_ids = [item["study_id"] for item in disease_response.data or []]
+            if not disease_study_ids:
+                # No studies in this category
+                return {
+                    "snapshot_date": str(date.today()),
+                    "total_studies": 0,
+                    "studies_with_sex_metadata": 0,
+                    "studies_sex_inferrable": 0,
+                    "studies_with_sex_analysis": 0,
+                    "avg_metadata_completeness": 0.0,
+                    "disease_category": disease_category,
+                    "organism": organism,
+                }
+            studies_query = studies_query.in_("id", disease_study_ids)
+
+        studies_response = studies_query.execute()
+        studies = studies_response.data or []
+
+        if not studies:
+            return {
+                "snapshot_date": str(date.today()),
+                "total_studies": 0,
+                "studies_with_sex_metadata": 0,
+                "studies_sex_inferrable": 0,
+                "studies_with_sex_analysis": 0,
+                "avg_metadata_completeness": 0.0,
+                "disease_category": disease_category,
+                "organism": organism,
+            }
+
+        # Calculate metrics
+        total_studies = len(studies)
+        with_sex_metadata = sum(1 for s in studies if s.get("sex_metadata_completeness", 0) > 0)
+        avg_completeness = (
+            sum(s.get("sex_metadata_completeness", 0) for s in studies) / total_studies
+            if total_studies > 0
+            else 0.0
+        )
+
+        # Get inferrable and analyzed counts
+        inferrable_query = (
+            client.table("studies").select("id", count="exact").eq("sex_inferrable", True)
+        )
+        if organism:
+            inferrable_query = inferrable_query.eq("organism", organism)
+        if disease_category and disease_study_ids:
+            inferrable_query = inferrable_query.in_("id", disease_study_ids)
+        inferrable_response = inferrable_query.execute()
+        inferrable_count = inferrable_response.count or 0
+
+        analyzed_query = (
+            client.table("studies").select("id", count="exact").eq("reports_sex_analysis", True)
+        )
+        if organism:
+            analyzed_query = analyzed_query.eq("organism", organism)
+        if disease_category and disease_study_ids:
+            analyzed_query = analyzed_query.in_("id", disease_study_ids)
+        analyzed_response = analyzed_query.execute()
+        analyzed_count = analyzed_response.count or 0
+
+        # Create snapshot record
+        snapshot_data = {
+            "snapshot_date": str(date.today()),
+            "total_studies": total_studies,
+            "studies_with_sex_metadata": with_sex_metadata,
+            "studies_sex_inferrable": inferrable_count,
+            "studies_with_sex_analysis": analyzed_count,
+            "avg_metadata_completeness": round(avg_completeness, 4),
+            "disease_category": disease_category,
+            "organism": organism,
+        }
+
+        # Insert into database
+        insert_response = client.table("completeness_snapshots").insert(snapshot_data).execute()
+
+        if insert_response.data:
+            logger.info(
+                f"Created snapshot for {organism or 'all organisms'}, {disease_category or 'all diseases'}"
+            )
+            return snapshot_data
+        else:
+            logger.warning("Snapshot insert returned no data")
+            return snapshot_data  # Return data anyway since we calculated it
+
+    except Exception as e:
+        logger.exception(f"Error creating snapshot: {e}")
+        raise
+
+
+@st.cache_data(ttl=600)
+def fetch_snapshots(
+    disease_category: Optional[str] = None,
+    organism: Optional[str] = None,
+    limit: int = 52,
+) -> list[dict]:
+    """
+    Fetch historical snapshots for trend analysis.
+
+    Retrieves previously captured snapshots, optionally filtered by organism
+    and/or disease category, ordered chronologically (oldest first).
+
+    Args:
+        disease_category: Optional filter for disease category
+        organism: Optional filter for organism
+        limit: Max number of snapshots to return (default 52 for one year)
+
+    Returns:
+        List of snapshot dicts ordered by snapshot_date (oldest first).
+        Empty list if no snapshots found.
+
+    Raises:
+        Exception: If database query fails
+    """
+    client = get_supabase_client()
+
+    try:
+        query = client.table("completeness_snapshots").select("*")
+
+        # Apply filters
+        if organism is not None:
+            query = query.eq("organism", organism)
+        if disease_category is not None:
+            query = query.eq("disease_category", disease_category)
+
+        # Order by date ascending (oldest first) and limit
+        query = query.order("snapshot_date", desc=False).limit(limit)
+
+        response = query.execute()
+        snapshots = response.data or []
+
+        logger.debug(f"Fetched {len(snapshots)} snapshots")
+        return snapshots
+
+    except Exception as e:
+        logger.exception(f"Error fetching snapshots: {e}")
+        return []

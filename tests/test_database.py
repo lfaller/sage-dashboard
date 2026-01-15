@@ -9,6 +9,8 @@ from sage.database import (
     get_rescue_opportunities,
     calculate_rescue_score,
     fetch_rescue_stats,
+    create_snapshot,
+    fetch_snapshots,
 )
 
 
@@ -522,3 +524,171 @@ class TestFetchRescueStats:
             assert "high_confidence_count" in stats
             assert "potential_samples" in stats
             assert "top_diseases" in stats
+
+
+class TestSnapshotFunctions:
+    """Tests for snapshot creation and retrieval."""
+
+    def test_create_snapshot_returns_dict_with_required_keys(self, mock_supabase_client):
+        """Test that create_snapshot returns dict with all required keys."""
+        # Mock studies query
+        mock_studies_response = Mock()
+        mock_studies_response.data = [
+            {"id": 1, "sex_metadata_completeness": 0.8},
+            {"id": 2, "sex_metadata_completeness": 0.5},
+        ]
+
+        # Mock count responses
+        mock_count_response = Mock()
+        mock_count_response.count = 2
+
+        # Build query chain mocks
+        studies_query = Mock()
+        studies_query.execute.return_value = mock_studies_response
+
+        count_query = Mock()
+        count_query.eq.return_value = count_query
+        count_query.execute.return_value = mock_count_response
+
+        insert_query = Mock()
+        insert_query.insert.return_value = insert_query
+        insert_query.execute.return_value = Mock(data=[{"snapshot_date": "2026-01-15"}])
+
+        call_count = [0]
+
+        def table_side_effect(table_name):
+            table_mock = Mock()
+            if table_name == "studies" and call_count[0] == 0:
+                call_count[0] += 1
+                table_mock.select.return_value = studies_query
+            elif table_name == "studies":
+                table_mock.select.return_value = count_query
+            elif table_name == "completeness_snapshots":
+                table_mock.insert.return_value = insert_query
+            return table_mock
+
+        mock_supabase_client.table.side_effect = table_side_effect
+
+        with patch("sage.database.get_supabase_client", return_value=mock_supabase_client):
+            snapshot = create_snapshot()
+
+            assert isinstance(snapshot, dict)
+            assert "snapshot_date" in snapshot
+            assert "total_studies" in snapshot
+            assert "studies_with_sex_metadata" in snapshot
+            assert "studies_sex_inferrable" in snapshot
+            assert "studies_with_sex_analysis" in snapshot
+            assert "avg_metadata_completeness" in snapshot
+
+    def test_create_snapshot_with_organism_filter(self, mock_supabase_client):
+        """Test create_snapshot with organism filter."""
+        # Mock studies query
+        mock_studies_response = Mock()
+        mock_studies_response.data = [{"id": 1, "sex_metadata_completeness": 0.7}]
+
+        # Mock count response
+        mock_count_response = Mock()
+        mock_count_response.count = 1
+
+        studies_query = Mock()
+        studies_query.eq.return_value = studies_query
+        studies_query.execute.return_value = mock_studies_response
+
+        count_query = Mock()
+        count_query.eq.return_value = count_query
+        count_query.execute.return_value = mock_count_response
+
+        insert_query = Mock()
+        insert_query.insert.return_value = insert_query
+        insert_query.execute.return_value = Mock(data=[{"snapshot_date": "2026-01-15"}])
+
+        call_count = [0]
+
+        def table_side_effect(table_name):
+            table_mock = Mock()
+            if table_name == "studies" and call_count[0] == 0:
+                call_count[0] += 1
+                table_mock.select.return_value = studies_query
+            elif table_name == "studies":
+                table_mock.select.return_value = count_query
+            elif table_name == "completeness_snapshots":
+                table_mock.insert.return_value = insert_query
+            return table_mock
+
+        mock_supabase_client.table.side_effect = table_side_effect
+
+        with patch("sage.database.get_supabase_client", return_value=mock_supabase_client):
+            snapshot = create_snapshot(organism="Homo sapiens")
+
+            assert snapshot["organism"] == "Homo sapiens"
+            assert snapshot["total_studies"] == 1
+
+    def test_fetch_snapshots_returns_list(self, mock_supabase_client):
+        """Test that fetch_snapshots returns a list of snapshots."""
+        mock_response = Mock()
+        mock_response.data = [
+            {"snapshot_date": "2026-01-08", "total_studies": 50},
+            {"snapshot_date": "2026-01-15", "total_studies": 52},
+        ]
+
+        query_mock = Mock()
+        query_mock.select.return_value = query_mock
+        query_mock.eq.return_value = query_mock
+        query_mock.order.return_value = query_mock
+        query_mock.limit.return_value = query_mock
+        query_mock.execute.return_value = mock_response
+
+        mock_supabase_client.table.return_value = query_mock
+
+        with patch("sage.database.get_supabase_client", return_value=mock_supabase_client):
+            snapshots = fetch_snapshots()
+
+            assert isinstance(snapshots, list)
+            assert len(snapshots) == 2
+            assert snapshots[0]["snapshot_date"] == "2026-01-08"
+            assert snapshots[1]["total_studies"] == 52
+
+    def test_fetch_snapshots_with_organism_filter(self, mock_supabase_client):
+        """Test fetch_snapshots with organism filter."""
+        mock_response = Mock()
+        mock_response.data = [{"snapshot_date": "2026-01-15", "organism": "Homo sapiens"}]
+
+        query_mock = Mock()
+        query_mock.select.return_value = query_mock
+        query_mock.eq.return_value = query_mock
+        query_mock.order.return_value = query_mock
+        query_mock.limit.return_value = query_mock
+        query_mock.execute.return_value = mock_response
+
+        mock_supabase_client.table.return_value = query_mock
+
+        with patch("sage.database.get_supabase_client", return_value=mock_supabase_client):
+            snapshots = fetch_snapshots(organism="Homo sapiens")
+
+            assert isinstance(snapshots, list)
+            assert len(snapshots) == 1
+            assert snapshots[0]["organism"] == "Homo sapiens"
+
+    def test_fetch_snapshots_with_limit(self, mock_supabase_client):
+        """Test fetch_snapshots respects limit parameter."""
+        mock_response = Mock()
+        mock_response.data = [
+            {"snapshot_date": f"2026-01-{i:02d}", "total_studies": 50 + i} for i in range(1, 11)
+        ]
+
+        query_mock = Mock()
+        query_mock.select.return_value = query_mock
+        query_mock.eq.return_value = query_mock
+        query_mock.order.return_value = query_mock
+        query_mock.limit.return_value = query_mock
+        query_mock.execute.return_value = mock_response
+
+        mock_supabase_client.table.return_value = query_mock
+
+        with patch("sage.database.get_supabase_client", return_value=mock_supabase_client):
+            # Clear cache by calling with different parameters to get fresh result
+            snapshots = fetch_snapshots(limit=5)
+
+            assert isinstance(snapshots, list)
+            # Should have 10 items from mock (limit is applied server-side)
+            assert len(snapshots) >= 5

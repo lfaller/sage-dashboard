@@ -1,0 +1,53 @@
+name: Weekly Snapshot
+
+on:
+  schedule:
+    # Runs every Monday at 00:00 UTC
+    - cron: '0 0 * * 1'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  create-snapshot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+
+      - name: Install dependencies
+        run: poetry install --no-root
+
+      - name: Create snapshot
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          mkdir -p .streamlit
+          cat > .streamlit/secrets.toml << EOF
+          [connections.supabase]
+          SUPABASE_URL = "$SUPABASE_URL"
+          SUPABASE_KEY = "$SUPABASE_KEY"
+          EOF
+          poetry run python scripts/create_snapshot.py --all-combinations
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ Weekly snapshot creation failed. Check the workflow logs.'
+            })

@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-01-15
+
+### Added
+- Phase 5: Weekly progress tracking system with automated Trends page
+- Snapshot system for capturing weekly metrics (`create_snapshot()`, `fetch_snapshots()`)
+- `pages/5_📈_Trends.py` - Historical progress visualization with 4 key charts
+- `scripts/create_snapshot.py` - CLI for manual snapshot creation with filtering options
+- `.github/workflows/weekly-snapshot.yml` - GitHub Actions automation for weekly snapshots (Monday 00:00 UTC)
+- Snapshot functions with organism and disease category filtering
+- 5 new tests for snapshot functionality (129 tests total, 89% coverage)
+
+### Changed
+- Updated ROADMAP.md to mark Phase 5 complete
+- Updated README.md with Deployment section for Streamlit Cloud
+- Version bumped to 0.5.0 for new feature release
+- Improved database.py with 180+ new lines for snapshot infrastructure
+
+### Technical Details
+- Snapshots stored in `completeness_snapshots` table (existing schema)
+- Weekly automation requires SUPABASE_URL and SUPABASE_KEY GitHub secrets
+- Supports creating snapshots for: overall, by organism, by disease category, or all combinations
+- 10-minute cache TTL for `fetch_snapshots()` for performance
+- GitHub Actions can be triggered manually via `workflow_dispatch` for testing
+
 ## [0.4.0] - 2026-01-14
 
 ### Added
