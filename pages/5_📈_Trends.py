@@ -69,8 +69,7 @@ try:
     # Section 1: Overall Completeness Trend
     st.subheader("Sex Metadata Completeness Over Time")
     st.markdown(
-        "Percentage of studies with at least some sex metadata documented. "
-        "Higher is better!"
+        "Percentage of studies with at least some sex metadata documented. " "Higher is better!"
     )
 
     completeness_data = df.copy()
@@ -105,9 +104,9 @@ try:
     )
 
     counts_data = df.copy()
-    counts_data["studies_without_metadata"] = counts_data["total_studies"] - counts_data[
-        "studies_with_sex_metadata"
-    ]
+    counts_data["studies_without_metadata"] = (
+        counts_data["total_studies"] - counts_data["studies_with_sex_metadata"]
+    )
 
     # Create stacked area chart
     fig_growth = go.Figure()
@@ -247,8 +246,8 @@ try:
 
     with col1:
         total_improvement = (
-            (df.iloc[-1]["avg_metadata_completeness"] - df.iloc[0]["avg_metadata_completeness"]) * 100
-        )
+            df.iloc[-1]["avg_metadata_completeness"] - df.iloc[0]["avg_metadata_completeness"]
+        ) * 100
         st.metric(
             label="Total Completeness Improvement",
             value=f"{total_improvement:.1f}%",
