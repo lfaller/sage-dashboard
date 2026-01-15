@@ -64,18 +64,29 @@ try:
             if study.get("has_sex_metadata", False):
                 organism_stats[organism]["with_sex"] += 1
 
+        # Filter to only human and mouse studies
+        organism_mapping = {
+            "Homo sapiens": "Human",
+            "Mus musculus": "Mouse",
+        }
+
+        filtered_stats = {
+            org: stats for org, stats in organism_stats.items()
+            if org in organism_mapping
+        }
+
         # Create dataframe
         organism_data = pd.DataFrame(
             [
                 {
-                    "Organism": organism,
+                    "Organism": organism_mapping.get(organism, organism),
                     "Total Studies": stats["total"],
                     "With Sex Metadata": stats["with_sex"],
                     "Completeness %": (stats["with_sex"] / stats["total"] * 100)
                     if stats["total"] > 0
                     else 0,
                 }
-                for organism, stats in organism_stats.items()
+                for organism, stats in filtered_stats.items()
             ]
         ).sort_values("Completeness %", ascending=False)
 
