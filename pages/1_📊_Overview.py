@@ -106,53 +106,28 @@ except Exception as e:
     st.error(f"Error fetching organism data: {e}")
     st.info("Make sure your Supabase connection is configured.")
 
-st.subheader("Completeness by Disease Category")
+st.subheader("Study Type Distribution")
 try:
-    # For now, display a note about disease category data
-    # This will be enhanced when disease_mappings table is populated
-    st.info(
-        "Disease category statistics will be available once disease mappings are linked to studies. "
-        "Currently showing study type breakdown as a proxy."
-    )
+    # Filter to only RNA-seq studies (primary focus for sex metadata)
+    rna_seq_studies = [s for s in all_studies if s.get("study_type") == "RNA-seq"]
 
-    # Display study type breakdown instead
-    study_types = {}
-    for study in all_studies:
-        study_type = study.get("study_type") or "Unknown"
-        if study_type not in study_types:
-            study_types[study_type] = {"total": 0, "with_sex": 0}
-        study_types[study_type]["total"] += 1
-        if study.get("has_sex_metadata", False):
-            study_types[study_type]["with_sex"] += 1
-
-    if study_types:
-        disease_data = pd.DataFrame(
-            [
-                {
-                    "Disease Category": f"{study_type} Studies",
-                    "Studies": stats["total"],
-                    "Completeness %": (stats["with_sex"] / stats["total"] * 100)
-                    if stats["total"] > 0
-                    else 0,
-                }
-                for study_type, stats in study_types.items()
-            ]
-        ).sort_values("Completeness %", ascending=False)
-
-        fig_disease = px.bar(
-            disease_data,
-            x="Disease Category",
-            y="Completeness %",
-            color="Completeness %",
-            color_continuous_scale="RdYlGn",
-            range_color=[0, 100],
-            text="Completeness %",
+    if rna_seq_studies:
+        rna_seq_with_sex = sum(1 for s in rna_seq_studies if s.get("has_sex_metadata", False))
+        rna_seq_total = len(rna_seq_studies)
+        rna_seq_pct = (
+            (rna_seq_with_sex / rna_seq_total * 100) if rna_seq_total > 0 else 0
         )
-        fig_disease.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
-        st.plotly_chart(fig_disease, width="stretch")
+
+        st.metric(
+            label="RNA-seq Studies with Sex Metadata",
+            value=f"{rna_seq_with_sex}/{rna_seq_total}",
+            delta=f"{rna_seq_pct:.1f}%",
+        )
+    else:
+        st.info("No RNA-seq studies found in database")
 
 except Exception as e:
-    st.error(f"Error fetching disease data: {e}")
+    st.error(f"Error fetching study type data: {e}")
     st.info("Make sure your Supabase connection is configured.")
 
 st.divider()
