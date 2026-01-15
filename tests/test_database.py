@@ -10,6 +10,7 @@ from sage.database import (
     calculate_rescue_score,
     fetch_rescue_stats,
     create_snapshot,
+    create_snapshot_with_date,
     fetch_snapshots,
 )
 
@@ -692,3 +693,100 @@ class TestSnapshotFunctions:
             assert isinstance(snapshots, list)
             # Should have 10 items from mock (limit is applied server-side)
             assert len(snapshots) >= 5
+
+    def test_create_snapshot_with_date_returns_dict(self, mock_supabase_client):
+        """Test that create_snapshot_with_date returns dict with required keys."""
+        # Mock studies query (with publication_date)
+        mock_studies_response = Mock()
+        mock_studies_response.data = [
+            {"id": 1, "sex_metadata_completeness": 0.8, "publication_date": "2026-01-10"},
+            {"id": 2, "sex_metadata_completeness": 0.5, "publication_date": "2026-01-12"},
+        ]
+
+        # Mock count responses
+        mock_count_response = Mock()
+        mock_count_response.count = 2
+
+        # Build query chain mocks
+        studies_query = Mock()
+        studies_query.lte.return_value = studies_query
+        studies_query.execute.return_value = mock_studies_response
+
+        count_query = Mock()
+        count_query.eq.return_value = count_query
+        count_query.lte.return_value = count_query
+        count_query.execute.return_value = mock_count_response
+
+        insert_query = Mock()
+        insert_query.insert.return_value = insert_query
+        insert_query.execute.return_value = Mock(data=[{"snapshot_date": "2026-01-15"}])
+
+        call_count = [0]
+
+        def table_side_effect(table_name):
+            table_mock = Mock()
+            if table_name == "studies" and call_count[0] == 0:
+                call_count[0] += 1
+                table_mock.select.return_value = studies_query
+            elif table_name == "studies":
+                table_mock.select.return_value = count_query
+            elif table_name == "completeness_snapshots":
+                table_mock.insert.return_value = insert_query
+            return table_mock
+
+        mock_supabase_client.table.side_effect = table_side_effect
+
+        with patch("sage.database.get_supabase_client", return_value=mock_supabase_client):
+            snapshot = create_snapshot_with_date("2026-01-15")
+
+            assert isinstance(snapshot, dict)
+            assert snapshot["snapshot_date"] == "2026-01-15"
+            assert "total_studies" in snapshot
+            assert "studies_with_sex_metadata" in snapshot
+            assert "avg_metadata_completeness" in snapshot
+
+    def test_create_snapshot_with_date_filters_by_publication_date(self, mock_supabase_client):
+        """Test that snapshots only include studies published by snapshot date."""
+        # Mock studies query
+        mock_studies_response = Mock()
+        mock_studies_response.data = [
+            {"id": 1, "sex_metadata_completeness": 0.9, "publication_date": "2026-01-10"}
+        ]
+
+        # Mock count response
+        mock_count_response = Mock()
+        mock_count_response.count = 1
+
+        studies_query = Mock()
+        studies_query.lte.return_value = studies_query
+        studies_query.execute.return_value = mock_studies_response
+
+        count_query = Mock()
+        count_query.eq.return_value = count_query
+        count_query.lte.return_value = count_query
+        count_query.execute.return_value = mock_count_response
+
+        insert_query = Mock()
+        insert_query.insert.return_value = insert_query
+        insert_query.execute.return_value = Mock(data=[{"snapshot_date": "2026-01-12"}])
+
+        call_count = [0]
+
+        def table_side_effect(table_name):
+            table_mock = Mock()
+            if table_name == "studies" and call_count[0] == 0:
+                call_count[0] += 1
+                table_mock.select.return_value = studies_query
+            elif table_name == "studies":
+                table_mock.select.return_value = count_query
+            elif table_name == "completeness_snapshots":
+                table_mock.insert.return_value = insert_query
+            return table_mock
+
+        mock_supabase_client.table.side_effect = table_side_effect
+
+        with patch("sage.database.get_supabase_client", return_value=mock_supabase_client):
+            snapshot = create_snapshot_with_date("2026-01-12")
+
+            assert snapshot["total_studies"] == 1
+            assert snapshot["snapshot_date"] == "2026-01-12"
