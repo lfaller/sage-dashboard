@@ -28,6 +28,7 @@ jobs:
         run: poetry install --no-root
 
       - name: Create snapshot
+        id: snapshot
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
@@ -38,10 +39,15 @@ jobs:
           SUPABASE_URL = "$SUPABASE_URL"
           SUPABASE_KEY = "$SUPABASE_KEY"
           EOF
-          poetry run python scripts/create_snapshot.py --all-combinations
+          poetry run python scripts/create_snapshot.py --all-combinations 2>&1 | tee snapshot.log
+          echo "status=success" >> $GITHUB_OUTPUT
+
+      - name: Show snapshot output
+        if: always()
+        run: cat snapshot.log || echo "No snapshot log found"
 
       - name: Notify on failure
-        if: failure()
+        if: failure() && github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
@@ -51,3 +57,7 @@ jobs:
               repo: context.repo.repo,
               body: '❌ Weekly snapshot creation failed. Check the workflow logs.'
             })
+
+      - name: Log failure
+        if: failure()
+        run: echo "❌ Weekly snapshot creation failed. Check the workflow logs."
