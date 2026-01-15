@@ -53,6 +53,8 @@ class GEOFetcher:
 
     # Allowed organisms for SAGE (sex metadata research focus)
     ALLOWED_ORGANISMS = {"Homo sapiens", "Mus musculus"}
+    # Allowed study types for SAGE (RNA-seq is primary focus)
+    ALLOWED_STUDY_TYPES = {"RNA-seq"}
 
     def __init__(self, rate_limit: float = 2.0, use_cache: bool = True):
         """Initialize GEO fetcher.
@@ -172,6 +174,11 @@ class GEOFetcher:
 
         # Detect study type
         study_type = self._detect_study_type(gse)
+
+        # Filter: Only allow RNA-seq studies (sex metadata focus)
+        if study_type not in self.ALLOWED_STUDY_TYPES:
+            logger.info(f"Skipping {geo_accession}: study type '{study_type}' not in allowed list")
+            return None
 
         # Detect sex metadata (study-level only)
         has_sex_metadata, sex_completeness = detect_sex_metadata_from_gse(gse)

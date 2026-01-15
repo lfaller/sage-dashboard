@@ -153,14 +153,15 @@ class TestGEOFetcher:
         assert study.study_type == "RNA-seq"
 
     @patch("GEOparse.get_GEO")
-    def test_fetch_study_detects_microarray_type(self, mock_get_geo):
-        """Test study type detection for microarray."""
+    def test_fetch_study_filters_non_rna_seq(self, mock_get_geo):
+        """Test that microarray studies are filtered out (RNA-seq only)."""
         mock_get_geo.return_value = MOCK_GSE_MICROARRAY_WITH_SEX
 
         fetcher = GEOFetcher()
         study = fetcher.fetch_study("GSE789012")
 
-        assert study.study_type == "microarray"
+        # Microarray studies should be filtered out
+        assert study is None
 
     @patch("GEOparse.get_GEO")
     def test_fetch_study_detects_sex_metadata(self, mock_get_geo):
@@ -175,8 +176,11 @@ class TestGEOFetcher:
 
     @patch("GEOparse.get_GEO")
     def test_fetch_study_handles_missing_optional_fields(self, mock_get_geo):
-        """Test fetching study with missing optional fields."""
-        mock_get_geo.return_value = MOCK_GSE_MINIMAL
+        """Test fetching RNA-seq study with missing optional fields."""
+        # Use the minimal mock but add RNA-seq type
+        mock_gse = MOCK_GSE_MINIMAL
+        mock_gse.metadata["type"] = ["Expression profiling by high throughput sequencing"]
+        mock_get_geo.return_value = mock_gse
 
         fetcher = GEOFetcher()
         study = fetcher.fetch_study("GSE567890")
@@ -184,6 +188,7 @@ class TestGEOFetcher:
         assert study is not None
         assert study.geo_accession == "GSE567890"
         assert study.title == "Simple study"
+        assert study.study_type == "RNA-seq"
         # Optional fields should be None or default values
         assert study.summary is None
 
@@ -227,7 +232,7 @@ class TestGEOFetcher:
 
     @patch("GEOparse.get_GEO")
     def test_fetch_multiple_studies(self, mock_get_geo):
-        """Test fetching multiple studies."""
+        """Test fetching multiple RNA-seq studies (microarray filtered)."""
         mock_get_geo.side_effect = [
             MOCK_GSE_RNA_SEQ_WITH_SEX,
             MOCK_GSE_MICROARRAY_WITH_SEX,
@@ -236,9 +241,10 @@ class TestGEOFetcher:
         fetcher = GEOFetcher()
         studies = fetcher.fetch_multiple_studies(["GSE123456", "GSE789012"])
 
-        assert len(studies) == 2
+        # Only RNA-seq studies are accepted; microarray is filtered out
+        assert len(studies) == 1
         assert studies[0].geo_accession == "GSE123456"
-        assert studies[1].geo_accession == "GSE789012"
+        assert studies[0].study_type == "RNA-seq"
 
     @patch("GEOparse.get_GEO")
     def test_fetch_multiple_studies_skips_existing(self, mock_get_geo):
@@ -255,7 +261,7 @@ class TestGEOFetcher:
 
     @patch("GEOparse.get_GEO")
     def test_fetch_multiple_studies_handles_failures(self, mock_get_geo):
-        """Test that multiple fetch continues despite individual failures."""
+        """Test that multiple fetch continues despite failures (RNA-seq only)."""
         mock_get_geo.side_effect = [
             MOCK_GSE_RNA_SEQ_WITH_SEX,
             Exception("Fetch failed"),
@@ -265,10 +271,10 @@ class TestGEOFetcher:
         fetcher = GEOFetcher()
         studies = fetcher.fetch_multiple_studies(["GSE123456", "GSE999999", "GSE789012"])
 
-        # Should have 2 successful studies despite 1 failure
-        assert len(studies) == 2
+        # Should have 1 RNA-seq study (microarray filtered, 1 failed)
+        assert len(studies) == 1
         assert studies[0].geo_accession == "GSE123456"
-        assert studies[1].geo_accession == "GSE789012"
+        assert studies[0].study_type == "RNA-seq"
 
     @patch("GEOparse.get_GEO")
     def test_fetch_study_sample_count(self, mock_get_geo):
