@@ -39,6 +39,24 @@ poetry run pytest -v
 
 ---
 
+## Deployment
+
+Deploy to **Streamlit Community Cloud** (free, serverless):
+
+1. **Push to GitHub** - Commit and push all changes to your repo
+2. **Connect to Streamlit Cloud** - Go to [streamlit.io/cloud](https://streamlit.io/cloud) → "New app" → select your repo
+3. **Add Secrets** - In your app's settings, add to the "Secrets" section:
+   ```toml
+   [connections.supabase]
+   SUPABASE_URL = "your-project-url"
+   SUPABASE_KEY = "your-anon-key"
+   ```
+4. **Done** - App auto-deploys when you push to main
+
+Your app is now live and accessible to anyone with the URL!
+
+---
+
 ## Development
 
 - **[QUICKSTART.md](QUICKSTART.md)** - Quick reference for common commands
