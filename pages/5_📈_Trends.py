@@ -51,7 +51,7 @@ st.divider()
 
 # Fetch snapshots
 try:
-    snapshots = fetch_snapshots(organism=organism_filter, disease_category=disease_filter, limit=52)
+    snapshots = fetch_snapshots(organism=organism_filter, disease_category=disease_filter, limit=260)
 
     if not snapshots or len(snapshots) < 2:
         st.warning("Not enough historical data yet. Snapshots are captured weekly.")
