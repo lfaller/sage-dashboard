@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-01-23
+
+### Added
+- Phase 6A.1: Expression-based sex inference using elastic net logistic regression
+- `ExpressionFetcher` class for fetching gene expression data from GEO samples
+  * Flexible column detection for gene symbols and expression values
+  * Support for X/Y chromosome sex marker genes (XIST, RPS4Y1, DDX3Y, EIF1AY, KDM5D)
+  * Handles platform heterogeneity with fallback column detection
+  * Single-sample and batch extraction methods
+- `SexClassifier` class for elastic net model training and prediction
+  * Train elastic net logistic regression on normalized expression data
+  * Probability scoring (P(male) in [0,1] range)
+  * Three-way classification: male/female/ambiguous (threshold 0.7)
+  * Batch classification via `classify_study()` for entire datasets
+- `ElasticNetInferenceStrategy` implementing strategy pattern
+  * Replaces placeholder InferenceStrategy implementation
+  * End-to-end inference: fetch expression → classify samples → aggregate statistics
+  * Graceful degradation on expression fetch failures
+  * Returns InferenceResult with sample-level classifications
+- 26 new tests for expression-based sex inference (414 test lines)
+  * Gene selection, column detection, expression extraction tests
+  * Model training, probability scoring, classification tests
+  * Batch processing and strategy pattern integration tests
+  * All tests use mocking to avoid network dependencies
+- scikit-learn ^1.3.0 dependency for elastic net logistic regression
+
+### Technical Details
+- Based on Flynn et al. (2021) BMC Bioinformatics methodology
+- Elastic net combines L1 (lasso) and L2 (ridge) for robust feature selection across platform heterogeneity
+- Default classification threshold 0.7 (P(male) >= 0.7 → male, P(male) <= 0.3 → female, else ambiguous)
+- Expression data preprocessed as 1D feature vectors: [XIST, RPS4Y1, DDX3Y, EIF1AY, KDM5D]
+- Validation against Flynn et al. benchmarks planned for Phase 6A.2
+- Overall test coverage: 195 tests passing, 90% coverage
+  * expression_fetcher.py: 93% coverage
+  * sex_inference.py: 96% coverage
+
 ## [0.6.0] - 2026-01-23
 
 ### Fixed
