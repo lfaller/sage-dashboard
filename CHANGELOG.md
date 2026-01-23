@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Trends view now displays full 5-year historical data (increased snapshot limit from 52 to 260)
 
 ### Added
+- Sex/gender metadata extraction from GEO sample characteristics_ch1 fields (supplement to sample name detection)
+- `extract_sex_from_characteristics()` - Parse sex from various characteristic formats (sex:, gender:, sex|, sex=)
+- `analyze_sample_characteristics()` - Analyze sex metadata across all samples in study
+- `merge_sex_analyses()` - Merge characteristics and sample name detection with priority logic
+- Support for multiple sex encoding formats: "sex: male", "gender: F", "sample_sex: Female", "sex=M", etc.
+- 30 new test cases for characteristics parsing and merging logic (86 tests total, 95% coverage for sex_inference.py)
 - `pages/6_❓_FAQ.py` - Comprehensive FAQ page documenting Trends methodology, metrics, and snapshot creation
 - Phase 4B: Automated NCBI Entrez API querying for dynamic study discovery
 - `src/sage/entrez_searcher.py` - EntrezSearcher module for NCBI GEO searches with rolling 5-year window
@@ -20,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 8 new tests for EntrezSearcher functionality (139 tests total, 88% coverage)
 
 ### Changed
+- `detect_sex_metadata_from_gse()` now analyzes both sample names and characteristics_ch1
+- `_calculate_sex_inferrability()` now merges characteristics-based and name-based sex detection
+- Characteristics prioritized over sample names as more explicit/reliable source
+- Expected improvement: +10-20% increase in sex metadata detection for studies with explicit characteristics
 - Backfilled 5 years of historical snapshots for complete historical trend visualization
 - Updated `scripts/fetch_geo_studies.py` to support both curated list (default) and automated search modes
 - Enhanced fetch_geo_studies.py CLI with new arguments: `--search`, `--organism`, `--study-type`, `--years-back`, `--email`
