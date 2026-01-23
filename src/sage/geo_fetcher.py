@@ -16,7 +16,12 @@ from typing import Optional, List, Tuple
 import GEOparse
 
 from sage.data_loader import Study
-from sage.sex_inference import analyze_sample_names, calculate_confidence
+from sage.sex_inference import (
+    analyze_sample_names,
+    analyze_sample_characteristics,
+    merge_sex_analyses,
+    calculate_confidence,
+)
 from sage.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -235,30 +240,35 @@ class GEOFetcher:
     ) -> Tuple[bool, float]:
         """Calculate sex inferrability based on study characteristics.
 
-        Combines sample name analysis with study metadata to determine if sex can
-        be inferred from expression data (future phase).
+        Combines sample name analysis and characteristics with study metadata
+        to determine if sex can be inferred from expression data (future phase).
 
         Args:
             gse: GEOparse GSE object
             organism: Organism name
             sample_count: Number of samples
             study_type: Study type (RNA-seq, microarray, etc.)
-            has_sex_metadata: Whether sex metadata detected in sample names
+            has_sex_metadata: Whether sex metadata detected (names or characteristics)
 
         Returns:
             Tuple of (sex_inferrable: bool, confidence: float 0-1)
         """
-        # Extract sample names for analysis
+        # Extract sample names and characteristics for analysis
         sample_names = []
+        samples_characteristics = []
         for gsm_id in gse.gsms.keys():
             try:
                 title = gse.gsms[gsm_id].metadata.get("title", [""])[0]
+                chars = gse.gsms[gsm_id].metadata.get("characteristics_ch1", [])
                 sample_names.append(title)
+                samples_characteristics.append(chars)
             except Exception:
                 continue
 
-        # Analyze sample names for sex patterns
-        sample_analysis = analyze_sample_names(sample_names)
+        # Analyze both sources and merge results
+        names_analysis = analyze_sample_names(sample_names)
+        chars_analysis = analyze_sample_characteristics(samples_characteristics)
+        merged_analysis = merge_sex_analyses(chars_analysis, names_analysis)
 
         # Build factors dict for confidence calculation
         factors = {
@@ -266,8 +276,8 @@ class GEOFetcher:
             "sample_count": sample_count,
             "has_sufficient_samples": sample_count >= 20,
             "is_human": organism == "Homo sapiens",
-            "sample_name_confidence": sample_analysis["confidence"],
-            "sample_name_pattern": sample_analysis["pattern"],
+            "sample_name_confidence": merged_analysis["confidence"],
+            "sample_name_pattern": merged_analysis["pattern"],
             "has_sex_metadata": has_sex_metadata,
         }
 
@@ -281,8 +291,8 @@ class GEOFetcher:
 def detect_sex_metadata_from_gse(gse) -> Tuple[bool, float]:
     """Detect sex metadata presence from GSE object (study-level only).
 
-    Analyzes sample titles/names for sex indicators (M/F patterns)
-    without downloading full sample data.
+    Analyzes both sample titles/names and characteristics_ch1 for sex indicators.
+    Prioritizes characteristics as more explicit/reliable source.
 
     Args:
         gse: GEOparse GSE object
@@ -290,23 +300,28 @@ def detect_sex_metadata_from_gse(gse) -> Tuple[bool, float]:
     Returns:
         Tuple of (has_sex_metadata: bool, completeness: float 0-1)
     """
-    # Extract sample titles from GSE metadata
+    # Extract sample titles and characteristics from GSE metadata
     sample_names = []
+    samples_characteristics = []
     for gsm_id in gse.gsms.keys():
         try:
             title = gse.gsms[gsm_id].metadata.get("title", [""])[0]
+            chars = gse.gsms[gsm_id].metadata.get("characteristics_ch1", [])
             sample_names.append(title)
+            samples_characteristics.append(chars)
         except Exception:
             continue
 
     if not sample_names:
         return False, 0.0
 
-    # Use existing sex inference module
-    analysis = analyze_sample_names(sample_names)
+    # Analyze both sources and merge results
+    names_analysis = analyze_sample_names(sample_names)
+    chars_analysis = analyze_sample_characteristics(samples_characteristics)
+    merged_analysis = merge_sex_analyses(chars_analysis, names_analysis)
 
     # Consider "clear" or "partial" patterns as having metadata
-    has_metadata = analysis["pattern"] in ["clear", "partial"]
-    completeness = analysis["confidence"]
+    has_metadata = merged_analysis["pattern"] in ["clear", "partial"]
+    completeness = merged_analysis["confidence"]
 
     return has_metadata, completeness
