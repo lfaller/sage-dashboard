@@ -11,10 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Weekly snapshot workflow now installs project package correctly (removed `--no-root` flag)
 - Trends view now displays full 5-year historical data (increased snapshot limit from 52 to 260)
 
-### Changed
-- Backfilled 5 years of historical snapshots for complete historical trend visualization
-
 ### Added
+- `pages/6_❓_FAQ.py` - Comprehensive FAQ page documenting Trends methodology, metrics, and snapshot creation
 - Phase 4B: Automated NCBI Entrez API querying for dynamic study discovery
 - `src/sage/entrez_searcher.py` - EntrezSearcher module for NCBI GEO searches with rolling 5-year window
 - Automated study discovery via `--search` flag in `scripts/fetch_geo_studies.py`
@@ -22,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 8 new tests for EntrezSearcher functionality (139 tests total, 88% coverage)
 
 ### Changed
+- Backfilled 5 years of historical snapshots for complete historical trend visualization
 - Updated `scripts/fetch_geo_studies.py` to support both curated list (default) and automated search modes
 - Enhanced fetch_geo_studies.py CLI with new arguments: `--search`, `--organism`, `--study-type`, `--years-back`, `--email`
 - Updated README.md with automated search examples
