@@ -2,6 +2,12 @@
 
 Extracts and normalizes gene expression data from GEOparse GSE objects
 for sex inference using X and Y chromosome genes.
+
+Based on Flynn et al. (2021) BMC Bioinformatics methodology for sex inference
+from gene expression data. Reference: Flynn E, Chang A, Altman RB.
+"Large-scale labeling and assessment of sex bias in publicly available
+expression data." BMC Bioinformatics. 2021 Mar 30;22(1):168.
+doi: 10.1186/s12859-021-04070-2
 """
 
 from typing import Dict, List, Optional
