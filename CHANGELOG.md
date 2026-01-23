@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-01-23
+
 ### Added
 - Phase 6A.1: Expression-based sex inference using elastic net logistic regression
 - `ExpressionFetcher` class for fetching gene expression data from GEO samples
