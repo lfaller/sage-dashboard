@@ -363,3 +363,335 @@ class TestInferenceStrategy:
 
         assert isinstance(result, InferenceResult)
         assert result.method == "custom"
+
+
+# ============================================================================
+# Tests for Characteristics-Based Sex Detection
+# ============================================================================
+
+
+class TestExtractSexFromCharacteristics:
+    """Tests for extracting sex from characteristics_ch1."""
+
+    def test_standard_colon_format_male(self):
+        """Test standard 'key: value' format with male."""
+        from sage.sex_inference import extract_sex_from_characteristics
+
+        result = extract_sex_from_characteristics(["sex: male"])
+        assert result == "male"
+
+    def test_standard_colon_format_female(self):
+        """Test standard 'key: value' format with female."""
+        from sage.sex_inference import extract_sex_from_characteristics
+
+        result = extract_sex_from_characteristics(["sex: female"])
+        assert result == "female"
+
+    def test_case_insensitive_key(self):
+        """Test case-insensitive key matching."""
+        from sage.sex_inference import extract_sex_from_characteristics
+
+        assert extract_sex_from_characteristics(["SEX: male"]) == "male"
+        assert extract_sex_from_characteristics(["Sex: Female"]) == "female"
+
+    def test_case_insensitive_value(self):
+        """Test case-insensitive value matching."""
+        from sage.sex_inference import extract_sex_from_characteristics
+
+        assert extract_sex_from_characteristics(["sex: MALE"]) == "male"
+        assert extract_sex_from_characteristics(["sex: Female"]) == "female"
+
+    def test_gender_key(self):
+        """Test 'gender' as alternative key."""
+        from sage.sex_inference import extract_sex_from_characteristics
+
+        assert extract_sex_from_characteristics(["gender: male"]) == "male"
+        assert extract_sex_from_characteristics(["gender: female"]) == "female"
+
+    def test_abbreviated_values_m_f(self):
+        """Test M/F abbreviations."""
+        from sage.sex_inference import extract_sex_from_characteristics
+
+        assert extract_sex_from_characteristics(["sex: M"]) == "male"
+        assert extract_sex_from_characteristics(["sex: F"]) == "female"
+        assert extract_sex_from_characteristics(["gender: m"]) == "male"
+        assert extract_sex_from_characteristics(["gender: f"]) == "female"
+
+    def test_alternate_delimiter_equals(self):
+        """Test equals sign as delimiter."""
+        from sage.sex_inference import extract_sex_from_characteristics
+
+        assert extract_sex_from_characteristics(["sex=male"]) == "male"
+        assert extract_sex_from_characteristics(["sex=female"]) == "female"
+
+    def test_alternate_delimiter_pipe(self):
+        """Test pipe as delimiter."""
+        from sage.sex_inference import extract_sex_from_characteristics
+
+        assert extract_sex_from_characteristics(["sex | male"]) == "male"
+        assert extract_sex_from_characteristics(["sex|female"]) == "female"
+
+    def test_alternate_key_sample_sex(self):
+        """Test 'sample_sex' as key."""
+        from sage.sex_inference import extract_sex_from_characteristics
+
+        assert extract_sex_from_characteristics(["sample_sex: male"]) == "male"
+        assert extract_sex_from_characteristics(["sample_sex: female"]) == "female"
+
+    def test_alternate_key_sex_ch1(self):
+        """Test 'sex_ch1' as key."""
+        from sage.sex_inference import extract_sex_from_characteristics
+
+        assert extract_sex_from_characteristics(["sex_ch1: male"]) == "male"
+        assert extract_sex_from_characteristics(["sex_ch1: female"]) == "female"
+
+    def test_whitespace_handling(self):
+        """Test handling of extra whitespace."""
+        from sage.sex_inference import extract_sex_from_characteristics
+
+        assert extract_sex_from_characteristics(["sex : male"]) == "male"
+        assert extract_sex_from_characteristics(["sex:  female  "]) == "female"
+        assert extract_sex_from_characteristics(["  sex: male  "]) == "male"
+
+    def test_mixed_characteristics(self):
+        """Test extraction from list with non-sex fields."""
+        from sage.sex_inference import extract_sex_from_characteristics
+
+        chars = ["tissue: brain", "sex: male", "age: 45"]
+        assert extract_sex_from_characteristics(chars) == "male"
+
+    def test_no_sex_field(self):
+        """Test when no sex field present."""
+        from sage.sex_inference import extract_sex_from_characteristics
+
+        chars = ["tissue: liver", "age: 30"]
+        assert extract_sex_from_characteristics(chars) is None
+
+    def test_empty_characteristics(self):
+        """Test with empty list."""
+        from sage.sex_inference import extract_sex_from_characteristics
+
+        assert extract_sex_from_characteristics([]) is None
+
+    def test_conflicting_values(self):
+        """Test when multiple conflicting sex fields exist."""
+        from sage.sex_inference import extract_sex_from_characteristics
+
+        chars = ["sex: male", "gender: female"]
+        assert extract_sex_from_characteristics(chars) is None
+
+    def test_duplicate_consistent_values(self):
+        """Test when multiple sex fields agree."""
+        from sage.sex_inference import extract_sex_from_characteristics
+
+        chars = ["sex: male", "gender: male"]
+        # Should return the value (consistent)
+        assert extract_sex_from_characteristics(chars) == "male"
+
+    def test_malformed_characteristics(self):
+        """Test handling of malformed characteristics."""
+        from sage.sex_inference import extract_sex_from_characteristics
+
+        # No delimiter
+        assert extract_sex_from_characteristics(["sexmale"]) is None
+        # Empty value
+        assert extract_sex_from_characteristics(["sex: "]) is None
+
+
+class TestAnalyzeSampleCharacteristics:
+    """Tests for analyzing characteristics across samples."""
+
+    def test_clear_pattern_all_labeled(self):
+        """Test clear pattern when all samples have sex metadata."""
+        from sage.sex_inference import analyze_sample_characteristics
+
+        samples = [["sex: male", "age: 30"], ["sex: female", "age: 25"]]
+        result = analyze_sample_characteristics(samples)
+
+        assert result["pattern"] == "clear"
+        assert result["confidence"] == 1.0
+        assert result["male_count"] == 1
+        assert result["female_count"] == 1
+        assert result["source"] == "characteristics"
+
+    def test_partial_pattern_half_labeled(self):
+        """Test partial pattern with 50% labeling."""
+        from sage.sex_inference import analyze_sample_characteristics
+
+        samples = [["sex: male", "age: 30"], ["tissue: brain"]]  # No sex field
+        result = analyze_sample_characteristics(samples)
+
+        assert result["pattern"] == "partial"
+        assert result["confidence"] == 0.5
+        assert result["male_count"] == 1
+        assert result["female_count"] == 0
+
+    def test_partial_pattern_above_threshold(self):
+        """Test partial pattern above 50% threshold."""
+        from sage.sex_inference import analyze_sample_characteristics
+
+        samples = [["sex: male"], ["sex: female"], ["sex: male"], ["tissue: brain"]]  # No sex field
+        result = analyze_sample_characteristics(samples)
+
+        assert result["pattern"] == "partial"
+        assert result["confidence"] == 0.75
+        assert result["male_count"] == 2
+        assert result["female_count"] == 1
+
+    def test_none_pattern_no_metadata(self):
+        """Test none pattern when no samples have sex."""
+        from sage.sex_inference import analyze_sample_characteristics
+
+        samples = [["tissue: brain"], ["age: 45"]]
+        result = analyze_sample_characteristics(samples)
+
+        assert result["pattern"] == "none"
+        assert result["confidence"] == 0.0
+        assert result["male_count"] == 0
+        assert result["female_count"] == 0
+
+    def test_mixed_formats(self):
+        """Test various characteristic formats work together."""
+        from sage.sex_inference import analyze_sample_characteristics
+
+        samples = [["sex: male"], ["gender: F"], ["sample_sex: Male"]]
+        result = analyze_sample_characteristics(samples)
+
+        assert result["pattern"] == "clear"
+        assert result["confidence"] == 1.0
+        assert result["male_count"] == 2
+        assert result["female_count"] == 1
+
+    def test_empty_samples_list(self):
+        """Test with empty samples list."""
+        from sage.sex_inference import analyze_sample_characteristics
+
+        result = analyze_sample_characteristics([])
+
+        assert result["pattern"] == "none"
+        assert result["confidence"] == 0.0
+
+    def test_all_empty_characteristics(self):
+        """Test when all samples have empty characteristics."""
+        from sage.sex_inference import analyze_sample_characteristics
+
+        samples = [[], [], []]
+        result = analyze_sample_characteristics(samples)
+
+        assert result["pattern"] == "none"
+        assert result["confidence"] == 0.0
+
+    def test_conflicting_characteristics_skipped(self):
+        """Test that samples with conflicting sex are not counted."""
+        from sage.sex_inference import analyze_sample_characteristics
+
+        samples = [
+            ["sex: male", "gender: female"],  # Conflicting - not counted
+            ["sex: male"],
+            ["sex: female"],
+        ]
+        result = analyze_sample_characteristics(samples)
+
+        # First sample conflict is skipped, so only 2 out of 3 are labeled
+        assert result["male_count"] == 1
+        assert result["female_count"] == 1
+        assert result["confidence"] == 2 / 3
+
+
+class TestMergeSexAnalyses:
+    """Tests for merging characteristics and sample name analyses."""
+
+    def test_characteristics_wins_when_clear(self):
+        """Test characteristics takes priority when clear."""
+        from sage.sex_inference import merge_sex_analyses
+
+        chars = {
+            "pattern": "clear",
+            "confidence": 1.0,
+            "male_count": 3,
+            "female_count": 3,
+            "source": "characteristics",
+        }
+        names = {"pattern": "partial", "confidence": 0.5, "male_count": 2, "female_count": 1}
+
+        result = merge_sex_analyses(chars, names)
+
+        assert result["pattern"] == "clear"
+        assert result["confidence"] == 1.0
+        assert result["source"] == "characteristics"
+
+    def test_sample_names_fallback_when_chars_empty(self):
+        """Test sample names used when characteristics empty."""
+        from sage.sex_inference import merge_sex_analyses
+
+        chars = {
+            "pattern": "none",
+            "confidence": 0.0,
+            "male_count": 0,
+            "female_count": 0,
+            "source": "characteristics",
+        }
+        names = {"pattern": "clear", "confidence": 1.0, "male_count": 4, "female_count": 4}
+
+        result = merge_sex_analyses(chars, names)
+
+        assert result["pattern"] == "clear"
+        assert result["confidence"] == 1.0
+        assert result["source"] == "sample_names"
+
+    def test_both_sources_empty(self):
+        """Test when both sources have no data."""
+        from sage.sex_inference import merge_sex_analyses
+
+        chars = {
+            "pattern": "none",
+            "confidence": 0.0,
+            "male_count": 0,
+            "female_count": 0,
+            "source": "characteristics",
+        }
+        names = {"pattern": "none", "confidence": 0.0, "male_count": 0, "female_count": 0}
+
+        result = merge_sex_analyses(chars, names)
+
+        assert result["pattern"] == "none"
+        assert result["confidence"] == 0.0
+
+    def test_characteristics_higher_confidence(self):
+        """Test characteristics prioritized even when not clear."""
+        from sage.sex_inference import merge_sex_analyses
+
+        chars = {
+            "pattern": "partial",
+            "confidence": 0.75,
+            "male_count": 3,
+            "female_count": 1,
+            "source": "characteristics",
+        }
+        names = {"pattern": "partial", "confidence": 0.5, "male_count": 2, "female_count": 1}
+
+        result = merge_sex_analyses(chars, names)
+
+        # Characteristics should win since confidence >= 0.5
+        assert result["source"] == "characteristics"
+        assert result["male_count"] == 3
+        assert result["female_count"] == 1
+
+    def test_names_wins_when_characteristics_partial_and_names_higher(self):
+        """Test names wins if characteristics is low and names is higher."""
+        from sage.sex_inference import merge_sex_analyses
+
+        chars = {
+            "pattern": "partial",
+            "confidence": 0.25,  # Below threshold
+            "male_count": 1,
+            "female_count": 0,
+            "source": "characteristics",
+        }
+        names = {"pattern": "clear", "confidence": 1.0, "male_count": 10, "female_count": 10}
+
+        result = merge_sex_analyses(chars, names)
+
+        # Names should win since confidence >= 0.5 and characteristics < 0.5
+        assert result["source"] == "sample_names"
+        assert result["confidence"] == 1.0
