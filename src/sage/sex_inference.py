@@ -6,7 +6,7 @@ inference; architecture supports future gene expression analysis.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import re
 
@@ -161,6 +161,162 @@ def analyze_sample_names(sample_names: List[str]) -> Dict:
         "male_count": male_count,
         "female_count": female_count,
     }
+
+
+def extract_sex_from_characteristics(characteristics: List[str]) -> Optional[str]:
+    """Extract sex/gender from characteristics_ch1 list.
+
+    Parses characteristics for sex/gender metadata with support for various
+    encoding formats (key-value pairs with different delimiters and key names).
+
+    Supported formats:
+        - Standard: "sex: male", "Sex: Female"
+        - Abbreviated values: "sex: M", "gender: F"
+        - Alternate delimiters: "sex=male", "sex|female"
+        - Alternate keys: "gender:", "sample_sex:", "sex_ch1:"
+
+    Args:
+        characteristics: List of characteristics strings (e.g., ["sex: male", "age: 45"])
+
+    Returns:
+        "male", "female", or None if not found or ambiguous (conflicting values)
+    """
+    if not characteristics:
+        return None
+
+    # Pattern to match various key names and delimiters
+    # Keys: sex, gender, sample_sex, sex_ch1 (case-insensitive)
+    # Delimiters: :, =, | with optional whitespace
+    sex_pattern = re.compile(r"^\s*(sex|gender|sample_sex|sex_ch1)\s*[:=|]\s*(.+?)$", re.IGNORECASE)
+
+    found_values = set()
+
+    for char in characteristics:
+        if not char or not isinstance(char, str):
+            continue
+
+        match = sex_pattern.match(char)
+        if not match:
+            continue
+
+        key, value = match.groups()
+        value = value.strip().lower()
+
+        # Handle standard full text values
+        if value in {"male", "man"}:
+            found_values.add("male")
+        elif value in {"female", "woman"}:
+            found_values.add("female")
+        # Handle abbreviated values (single letter, case-insensitive)
+        elif value == "m":
+            found_values.add("male")
+        elif value == "f":
+            found_values.add("female")
+        # Other formats not recognized - skip
+
+    # Return None if conflicting values found
+    if len(found_values) > 1:
+        return None
+
+    # Return the found value or None
+    return found_values.pop() if found_values else None
+
+
+def analyze_sample_characteristics(samples_characteristics: List[List[str]]) -> Dict:
+    """Analyze sex metadata from sample characteristics across multiple samples.
+
+    Parses characteristics_ch1 for all samples and determines the pattern
+    and confidence of sex metadata detection.
+
+    Args:
+        samples_characteristics: List of characteristics_ch1 lists (one per sample)
+
+    Returns:
+        Dict with:
+            - pattern: "clear" (100%), "partial" (50-99%), or "none" (<50%)
+            - confidence: 0.0-1.0 (fraction of samples with sex metadata)
+            - male_count: Number of male samples
+            - female_count: Number of female samples
+            - source: "characteristics"
+    """
+    if not samples_characteristics:
+        return {
+            "pattern": "none",
+            "confidence": 0.0,
+            "male_count": 0,
+            "female_count": 0,
+            "source": "characteristics",
+        }
+
+    male_count = 0
+    female_count = 0
+
+    for sample_chars in samples_characteristics:
+        if not isinstance(sample_chars, list):
+            continue
+
+        sex = extract_sex_from_characteristics(sample_chars)
+        if sex == "male":
+            male_count += 1
+        elif sex == "female":
+            female_count += 1
+
+    total = len(samples_characteristics)
+    labeled = male_count + female_count
+
+    if labeled == total:
+        confidence = 1.0
+        pattern = "clear"
+    elif labeled >= total * 0.5:
+        confidence = labeled / total
+        pattern = "partial"
+    else:
+        confidence = 0.0
+        pattern = "none"
+
+    return {
+        "pattern": pattern,
+        "confidence": confidence,
+        "male_count": male_count,
+        "female_count": female_count,
+        "source": "characteristics",
+    }
+
+
+def merge_sex_analyses(characteristics_result: Dict, sample_names_result: Dict) -> Dict:
+    """Merge sex detection results from characteristics and sample names.
+
+    Prioritizes characteristics over sample names as they are more explicit
+    and reliable. Returns result from the source with highest confidence.
+
+    Args:
+        characteristics_result: Dict from analyze_sample_characteristics()
+        sample_names_result: Dict from analyze_sample_names()
+
+    Returns:
+        Merged dict with pattern, confidence, counts, and source tracking
+    """
+    chars_confidence = characteristics_result.get("confidence", 0.0)
+    names_confidence = sample_names_result.get("confidence", 0.0)
+
+    # Priority logic:
+    # 1. If characteristics has confidence >= 0.5, use it
+    # 2. Else if sample names has confidence >= 0.5, use it
+    # 3. Else use whichever has higher confidence
+    if chars_confidence >= 0.5:
+        result = characteristics_result.copy()
+        result["source"] = "characteristics"
+    elif names_confidence >= 0.5:
+        result = sample_names_result.copy()
+        result["source"] = "sample_names"
+    elif chars_confidence > names_confidence:
+        result = characteristics_result.copy()
+        result["source"] = "characteristics"
+    else:
+        result = sample_names_result.copy()
+        result["source"] = "sample_names"
+
+    return result
 
 
 def calculate_confidence(factors: Dict) -> float:

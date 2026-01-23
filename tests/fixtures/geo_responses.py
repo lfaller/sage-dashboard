@@ -141,3 +141,147 @@ MOCK_GSE_EMPTY_SAMPLES.metadata = {
     "type": ["Expression profiling by high throughput sequencing"],
 }
 MOCK_GSE_EMPTY_SAMPLES.gsms = {}
+
+
+# ============================================================================
+# RNA-seq Study with Sex in Characteristics (not sample names)
+# ============================================================================
+
+MOCK_GSE_WITH_CHARACTERISTICS = Mock()
+MOCK_GSE_WITH_CHARACTERISTICS.name = "GSE888888"
+MOCK_GSE_WITH_CHARACTERISTICS.metadata = {
+    "title": ["Study with sex in characteristics, not sample names"],
+    "organism": ["Homo sapiens"],
+    "type": ["Expression profiling by high throughput sequencing"],
+    "summary": ["RNA-seq with sex metadata in characteristics_ch1"],
+    "submission_date": ["2023-06-01"],
+    "platform_id": ["GPL24676"],
+}
+MOCK_GSE_WITH_CHARACTERISTICS.gsms = {
+    "GSM1": Mock(
+        metadata={
+            "title": ["Sample_001"],
+            "characteristics_ch1": ["tissue: brain", "sex: male", "age: 45"],
+        }
+    ),
+    "GSM2": Mock(
+        metadata={
+            "title": ["Sample_002"],
+            "characteristics_ch1": ["tissue: brain", "sex: female", "age: 50"],
+        }
+    ),
+    "GSM3": Mock(
+        metadata={
+            "title": ["Sample_003"],
+            "characteristics_ch1": ["tissue: brain", "gender: M", "age: 38"],
+        }
+    ),
+    "GSM4": Mock(
+        metadata={
+            "title": ["Sample_004"],
+            "characteristics_ch1": ["tissue: brain", "gender: F", "age: 42"],
+        }
+    ),
+}
+
+
+# ============================================================================
+# RNA-seq Study with Sex in Both Characteristics and Sample Names
+# ============================================================================
+
+MOCK_GSE_BOTH_SOURCES = Mock()
+MOCK_GSE_BOTH_SOURCES.name = "GSE999999"
+MOCK_GSE_BOTH_SOURCES.metadata = {
+    "title": ["Study with sex in both characteristics and names"],
+    "organism": ["Homo sapiens"],
+    "type": ["Expression profiling by high throughput sequencing"],
+    "summary": ["RNA-seq with sex in both sources"],
+    "submission_date": ["2023-07-01"],
+    "platform_id": ["GPL24676"],
+}
+MOCK_GSE_BOTH_SOURCES.gsms = {
+    "GSM1": Mock(
+        metadata={"title": ["Male_sample_1"], "characteristics_ch1": ["sex: male", "age: 35"]}
+    ),
+    "GSM2": Mock(
+        metadata={"title": ["Female_sample_1"], "characteristics_ch1": ["sex: female", "age: 40"]}
+    ),
+    "GSM3": Mock(
+        metadata={"title": ["Male_sample_2"], "characteristics_ch1": ["gender: M", "age: 45"]}
+    ),
+    "GSM4": Mock(
+        metadata={"title": ["Female_sample_2"], "characteristics_ch1": ["gender: F", "age: 38"]}
+    ),
+}
+
+
+# ============================================================================
+# RNA-seq Study with Partial Characteristics (some samples missing sex)
+# ============================================================================
+
+MOCK_GSE_PARTIAL_CHARACTERISTICS = Mock()
+MOCK_GSE_PARTIAL_CHARACTERISTICS.name = "GSE777777"
+MOCK_GSE_PARTIAL_CHARACTERISTICS.metadata = {
+    "title": ["Study with partial sex metadata in characteristics"],
+    "organism": ["Homo sapiens"],
+    "type": ["Expression profiling by high throughput sequencing"],
+    "summary": ["RNA-seq where not all samples have sex metadata"],
+    "submission_date": ["2023-08-01"],
+    "platform_id": ["GPL24676"],
+}
+MOCK_GSE_PARTIAL_CHARACTERISTICS.gsms = {
+    "GSM1": Mock(
+        metadata={"title": ["Sample_A"], "characteristics_ch1": ["sex: male", "tissue: liver"]}
+    ),
+    "GSM2": Mock(
+        metadata={
+            "title": ["Sample_B"],
+            "characteristics_ch1": ["tissue: liver", "age: 42"],  # No sex field
+        }
+    ),
+    "GSM3": Mock(
+        metadata={"title": ["Sample_C"], "characteristics_ch1": ["sex: female", "tissue: liver"]}
+    ),
+    "GSM4": Mock(
+        metadata={"title": ["Sample_D"], "characteristics_ch1": []}  # Empty characteristics
+    ),
+}
+
+
+# ============================================================================
+# RNA-seq Study with Various Characteristic Formats
+# ============================================================================
+
+MOCK_GSE_VARIOUS_FORMATS = Mock()
+MOCK_GSE_VARIOUS_FORMATS.name = "GSE666666"
+MOCK_GSE_VARIOUS_FORMATS.metadata = {
+    "title": ["Study with various characteristic format variations"],
+    "organism": ["Homo sapiens"],
+    "type": ["Expression profiling by high throughput sequencing"],
+    "summary": ["RNA-seq with different sex characteristic encodings"],
+    "submission_date": ["2023-09-01"],
+    "platform_id": ["GPL24676"],
+}
+MOCK_GSE_VARIOUS_FORMATS.gsms = {
+    "GSM1": Mock(
+        metadata={"title": ["Sample_1"], "characteristics_ch1": ["sex: male"]}  # Standard colon
+    ),
+    "GSM2": Mock(
+        metadata={"title": ["Sample_2"], "characteristics_ch1": ["Sex: Female"]}  # Capital S
+    ),
+    "GSM3": Mock(
+        metadata={"title": ["Sample_3"], "characteristics_ch1": ["gender: M"]}  # Abbreviated
+    ),
+    "GSM4": Mock(
+        metadata={
+            "title": ["Sample_4"],
+            "characteristics_ch1": ["sample_sex: female"],  # Alternate key
+        }
+    ),
+    "GSM5": Mock(
+        metadata={"title": ["Sample_5"], "characteristics_ch1": ["sex=male"]}  # Equals delimiter
+    ),
+    "GSM6": Mock(
+        metadata={"title": ["Sample_6"], "characteristics_ch1": ["sex | F"]}  # Pipe delimiter
+    ),
+}
