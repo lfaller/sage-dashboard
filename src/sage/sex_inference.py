@@ -47,7 +47,7 @@ class MetadataInferenceStrategy(InferenceStrategy):
         """Main inference logic for metadata strategy."""
         factors = self._analyze_factors(study_dict)
         confidence = self._calculate_confidence(factors)
-        inferrable = confidence >= 0.5  # Threshold for "inferrable"
+        inferrable = bool(confidence >= 0.5)  # Threshold for "inferrable"
 
         return InferenceResult(
             inferrable=inferrable, confidence=confidence, method="metadata", factors=factors
@@ -549,7 +549,7 @@ class ElasticNetInferenceStrategy(InferenceStrategy):
 
         # Calculate study-level statistics
         avg_confidence = classifications["confidence"].mean()
-        inferrable = avg_confidence >= 0.7
+        inferrable = bool(avg_confidence >= 0.7)
 
         return InferenceResult(
             inferrable=inferrable,
