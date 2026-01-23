@@ -376,19 +376,191 @@ def infer_from_metadata(study_dict: Dict) -> Dict:
 
 
 # ============================================================================
-# Future: Expression-Based Inference Strategy (Phase 4+)
+# Expression-Based Inference (Phase 6A)
 # ============================================================================
 
 
-class ExpressionInferenceStrategy(InferenceStrategy):
-    """Placeholder for future expression-based inference.
+class SexClassifier:
+    """Classifies sex based on gene expression patterns using elastic net model.
 
-    Will analyze:
-    - XIST expression (female marker)
-    - RPS4Y1/DDX3Y expression (male markers)
-    - X/Y chromosome gene expression patterns
+    Based on Flynn et al. (2021) - uses penalized logistic regression on
+    X and Y chromosome genes for robust, platform-agnostic sex classification.
     """
 
+    def __init__(
+        self, x_genes: Optional[List[str]] = None, y_genes: Optional[List[str]] = None, model=None
+    ):
+        """Initialize SexClassifier.
+
+        Args:
+            x_genes: List of X chromosome gene symbols
+            y_genes: List of Y chromosome gene symbols
+            model: Pre-trained LogisticRegression model (optional)
+        """
+        from src.sage.expression_fetcher import get_x_chromosome_genes, get_y_chromosome_genes
+
+        self.x_genes = x_genes or get_x_chromosome_genes()
+        self.y_genes = y_genes or get_y_chromosome_genes()
+        self.all_genes = self.x_genes + self.y_genes
+        self.model = model
+        self.model_version = "elasticnet_v1"
+
+    def train(
+        self, expression_matrix, sex_labels, alpha: float = 0.5, l1_ratio: float = 0.5
+    ) -> None:
+        """Train elastic net logistic regression model.
+
+        Args:
+            expression_matrix: Shape (n_samples, n_genes) with normalized expression
+            sex_labels: Array of 0 (female) or 1 (male)
+            alpha: Regularization strength
+            l1_ratio: Balance between L1 (lasso) and L2 (ridge)
+        """
+        from sklearn.linear_model import LogisticRegression
+
+        self.model = LogisticRegression(
+            penalty="elasticnet",
+            solver="saga",
+            C=1.0 / alpha,
+            l1_ratio=l1_ratio,
+            max_iter=1000,
+            random_state=42,
+        )
+        self.model.fit(expression_matrix, sex_labels)
+
+    def predict_sex_score(self, sample_expression: Dict) -> float:
+        """Get probability score that sample is male [0-1].
+
+        Args:
+            sample_expression: Dict mapping gene symbol to expression value
+
+        Returns:
+            float: P(male), where 0 = female, 1 = male
+
+        Raises:
+            ValueError: If model not trained
+        """
+        import numpy as np
+
+        if self.model is None:
+            raise ValueError("Model not trained")
+
+        # Convert to proper format
+        expression_array = np.array(
+            [sample_expression.get(g, 0.0) for g in self.all_genes]
+        ).reshape(1, -1)
+        prob_male = self.model.predict_proba(expression_array)[0, 1]
+        return float(prob_male)
+
+    def classify_sample(self, sample_expression: Dict, threshold: float = 0.7) -> tuple:
+        """Classify single sample as male/female/ambiguous.
+
+        Args:
+            sample_expression: Expression dict mapping gene symbol to value
+            threshold: Classification threshold (Flynn et al. used 0.7)
+
+        Returns:
+            Tuple of (sex: str, confidence: float)
+                - sex: "male", "female", or "ambiguous"
+                - confidence: 0.0-1.0
+        """
+        prob_male = self.predict_sex_score(sample_expression)
+
+        if prob_male >= threshold:
+            return "male", prob_male
+        elif prob_male <= (1 - threshold):
+            return "female", 1 - prob_male
+        else:
+            return "ambiguous", 0.5 - abs(prob_male - 0.5)
+
+    def classify_study(self, expression_df, threshold: float = 0.7):
+        """Classify all samples in a study.
+
+        Args:
+            expression_df: DataFrame with genes as columns, samples as rows
+            threshold: Classification threshold
+
+        Returns:
+            DataFrame with columns: sample_id, inferred_sex, confidence
+        """
+        import pandas as pd
+
+        results = []
+
+        for sample_id, row in expression_df.iterrows():
+            sex, confidence = self.classify_sample(row.to_dict(), threshold)
+            results.append({"sample_id": sample_id, "inferred_sex": sex, "confidence": confidence})
+
+        return pd.DataFrame(results)
+
+
+class ElasticNetInferenceStrategy(InferenceStrategy):
+    """Infer sex from gene expression patterns using elastic net model.
+
+    Based on Flynn et al. (2021) BMC Bioinformatics paper.
+    Analyzes X and Y chromosome gene expression to classify biological sex.
+    """
+
+    def __init__(self, classifier: Optional[SexClassifier] = None):
+        """Initialize ElasticNetInferenceStrategy.
+
+        Args:
+            classifier: Pre-trained SexClassifier (optional)
+        """
+        self.classifier = classifier or SexClassifier()
+
     def infer(self, study_dict: Dict) -> InferenceResult:
-        """Placeholder - not yet implemented."""
-        raise NotImplementedError("Expression inference not yet implemented")
+        """Perform expression-based inference.
+
+        Args:
+            study_dict: Study dict that must contain 'gse' key with GEOparse GSE object
+
+        Returns:
+            InferenceResult with sample-level classifications
+
+        Raises:
+            ValueError: If study_dict missing 'gse' key or expression not available
+        """
+        import logging
+        from src.sage.expression_fetcher import ExpressionFetcher
+
+        logger = logging.getLogger(__name__)
+
+        gse = study_dict.get("gse")
+        if not gse:
+            raise ValueError("study_dict must contain 'gse' key with GEOparse GSE object")
+
+        fetcher = ExpressionFetcher()
+
+        try:
+            # Fetch expression for sex markers
+            expression_df = fetcher.fetch_study_expression(gse)
+        except Exception as e:
+            logger.warning(f"Could not fetch expression for {gse.name}: {e}")
+            return InferenceResult(
+                inferrable=False,
+                confidence=0.0,
+                method="expression_elasticnet",
+                factors={"error": str(e), "gse": gse.name},
+            )
+
+        # Classify samples
+        classifications = self.classifier.classify_study(expression_df)
+
+        # Calculate study-level statistics
+        avg_confidence = classifications["confidence"].mean()
+        inferrable = avg_confidence >= 0.7
+
+        return InferenceResult(
+            inferrable=inferrable,
+            confidence=float(avg_confidence),
+            method="expression_elasticnet",
+            factors={
+                "sample_count": len(classifications),
+                "female_count": int((classifications["inferred_sex"] == "female").sum()),
+                "male_count": int((classifications["inferred_sex"] == "male").sum()),
+                "ambiguous_count": int((classifications["inferred_sex"] == "ambiguous").sum()),
+                "gse": gse.name,
+                "classifications": classifications.to_dict("records"),
+            },
+        )
