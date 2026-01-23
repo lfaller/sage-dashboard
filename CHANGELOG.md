@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-01-23
+
 ### Fixed
 - Weekly snapshot workflow now installs project package correctly (removed `--no-root` flag)
 - Trends view now displays full 5-year historical data (increased snapshot limit from 52 to 260)
