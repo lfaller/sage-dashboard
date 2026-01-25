@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-01-25
+
+### Fixed
+- Fix missing dependencies in requirements.txt for Streamlit Cloud deployment
+  * Add local sage package installation with `-e .`
+  * Add scikit-learn dependency that was declared in pyproject.toml but missing from requirements.txt
+
 ## [0.9.0] - 2026-01-25
 
 ### Added
