@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-01-25
+
 ### Added
 - Phase 6A.2: Training data extraction and management for model validation
 - `TrainingDataExtractor` class for extracting training samples
@@ -25,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   * Tests for extraction, label conflict resolution, statistics computation
   * Tests for stratified splitting on balanced and imbalanced datasets
   * Tests for fixture metadata serialization
+- `docs/TESTING_GUIDE.md` - Comprehensive testing reference with 7 testing methods
 
 ### Technical Details
 - Training data extraction uses stratified k-fold approach to handle small datasets
