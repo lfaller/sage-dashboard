@@ -51,6 +51,20 @@ class ModelMetadata:
         """Deserialize from dictionary."""
         return cls(**data)
 
+    @classmethod
+    def from_json_file(cls, path: str) -> "ModelMetadata":
+        """Load metadata from JSON file.
+
+        Args:
+            path: Path to metadata.json file
+
+        Returns:
+            ModelMetadata instance
+        """
+        with open(path) as f:
+            data = json.load(f)
+        return cls.from_dict(data)
+
 
 class ModelPersistence:
     """Manages saving and loading trained models with versioning."""
