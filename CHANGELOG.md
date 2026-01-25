@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-01-25
+
+### Added
+- Phase 6A.2: Training data extraction and management for model validation
+- `TrainingDataExtractor` class for extracting training samples
+  * `fetch_high_confidence_samples()` to filter by confidence threshold
+  * `validate_label_consistency()` to detect conflicting sex labels across sources
+  * `resolve_conflicting_labels()` with source preference logic (characteristics prioritized)
+  * `export_training_fixture()` for JSON fixture creation with metadata
+  * `compute_dataset_statistics()` for balance ratio and label distribution analysis
+  * `validate_training_set_size()` to warn on undersized datasets (<20 samples)
+- `TrainingDataset` dataclass for label management
+  * Properties: `male_count`, `female_count`, `total_samples`, `balance_ratio`
+  * `stratified_split()` for balanced train/test splitting with stratification
+- `TrainingDatasetMetadata` dataclass for fixture metadata
+  * Serialization: `to_dict()` and `from_dict()` for fixture versioning
+- 19 new tests for training data management (96% coverage)
+  * Tests for extraction, label conflict resolution, statistics computation
+  * Tests for stratified splitting on balanced and imbalanced datasets
+  * Tests for fixture metadata serialization
+- `docs/TESTING_GUIDE.md` - Comprehensive testing reference with 7 testing methods
+
+### Technical Details
+- Training data extraction uses stratified k-fold approach to handle small datasets
+- Preference-based conflict resolution: characteristics > sample_names > other sources
+- Stratified splitting maintains class balance ratio in train/test splits
+- Fixture versioning supports reproducible model training and validation
+- Integration with Phase 6A.1 expression-based inference pipeline
+- Overall test coverage: 214 tests passing, 90% coverage
+  * training_data_manager.py: 96% coverage
+
 ## [0.7.0] - 2026-01-23
 
 ### Added
