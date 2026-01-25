@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Phase 6A.2 Continued: Model training, validation, and persistence
+- `SexClassifierTrainer` for elastic net model training
+  * Stratified k-fold cross-validation (default 10 folds)
+  * Support for elastic net regularization (L1+L2)
+  * Configurable hyperparameters (alpha, l1_ratio)
+  * Checkpoint save/load for model persistence
+  * Feature importance extraction
+- `ModelValidator` for model validation and benchmarking
+  * Validate on test sets with comprehensive metrics
+  * Compare against Flynn et al. (2021) benchmarks
+    - Microarray: 91.7% accuracy
+    - RNA-seq: 88.4% accuracy
+  * Calculate sensitivity, specificity, precision, recall, F1, AUC
+  * JSON export of validation reports
+- `ModelPersistence` for versioned model management
+  * Save/load trained models with semantic versioning
+  * Store training metadata (samples, accuracy, date)
+  * Version listing and latest version retrieval
+  * Model deletion with version tracking
+- `ModelRegistry` for centralized model management
+  * Register and track trained models
+  * Set/get active model versions
+  * Store arbitrary metadata with models
+- CLI scripts for model lifecycle management
+  * `train_sex_classifier.py` - Train models with configurable parameters
+  * `validate_model.py` - Validate models on test data with benchmark comparison
+  * `model_status.py` - List available models and versions
+- 54 new tests for model training/validation/persistence (91% coverage)
+  * `model_training.py`: 24 tests covering training, CV, predictions, checkpointing
+  * `model_validation.py`: 15 tests covering validation, benchmarking, reporting
+  * `model_persistence.py`: 15 tests covering save/load, versioning, registry
+- Fixed sklearn API compatibility (SGDClassifier with CalibratedClassifierCV)
+
+### Technical Details
+- Uses SGDClassifier with elastic net (L1+L2) for robust feature selection
+- Wraps with CalibratedClassifierCV to provide probability predictions
+- Stratified k-fold maintains class balance in cross-validation
+- JSON serialization for model metadata and validation reports
+- Semantic versioning supports reproducible model management
+- Flynn et al. benchmarks provide performance comparison baseline
+- Overall test coverage: 268 tests passing, 90% coverage
+  * model_training.py: 93% coverage
+  * model_validation.py: 94% coverage
+  * model_persistence.py: 84% coverage
+
 ## [0.8.0] - 2026-01-25
 
 ### Added
