@@ -69,7 +69,7 @@ Your app is now live and accessible to anyone with the URL!
 - **Backend:** Python 3.11+
 - **Database:** Supabase (PostgreSQL) with REST API
 - **Data Source:** NCBI GEO (Gene Expression Omnibus) via GEOparse
-- **Testing:** pytest (124 tests, 94% coverage)
+- **Testing:** pytest (301 tests, 83% coverage)
 - **Code Quality:** Black, Ruff
 - **Dependency Management:** Poetry
 - **CI/CD:** GitHub Actions with auto-formatting
@@ -113,3 +113,33 @@ poetry run python scripts/fetch_geo_studies.py --search --limit 10 --dry-run
 ```
 
 See [scripts/fetch_geo_studies.py](scripts/fetch_geo_studies.py) for details.
+
+---
+
+## Model Training
+
+SAGE includes a complete workflow for training and validating sex classification models using elastic net logistic regression.
+
+**Quick Start:**
+
+```bash
+# Train model using fixture data
+poetry run python scripts/train_sex_classifier.py --fixture tiny
+
+# Validate against test set
+poetry run python scripts/validate_model.py --model sex_classifier --version 1.0.0 --test-data data.csv
+
+# Check model status
+poetry run python scripts/model_status.py --list
+poetry run python scripts/model_status.py --model sex_classifier --version 1.0.0
+```
+
+**Features:**
+- Elastic net logistic regression with cross-validation
+- Training fixtures for reproducible tests (tiny, v1, imbalanced)
+- Model versioning with semantic versioning (1.0.0, 2.0.0, etc.)
+- Validation against Flynn et al. benchmarks
+- Filesystem storage with JSON metadata and pickle models
+- Database integration for audit trails and model history
+
+See [docs/MODEL_TRAINING.md](docs/MODEL_TRAINING.md) for comprehensive guide.

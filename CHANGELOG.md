@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-01-25
+
+### Added
+- Phase 6A.2 Continued: Training fixtures and database integration
+- Training fixtures for reproducible model testing
+  * `sage_training_tiny.json`: 10 samples (5F/5M), 20 features
+  * `sage_training_v1.json`: 100 samples (50F/50M), 100 features - standard training
+  * `sage_training_imbalanced.json`: 60 samples (45M/15F), 100 features - class imbalance testing
+  * Fixture loader module with metadata utilities
+- `ModelDatabaseManager` for database integration
+  * Register model versions in database
+  * Record validation results with confusion matrix metrics
+  * Track full audit trail (training and validation events)
+  * Query model versions, best performing, latest version
+  * Health checks and comprehensive reporting
+  * Cross-model comparison and performance analysis
+- Database schema planning for model_versions, validation_results, model_registry tables
+- Comprehensive model training documentation (`docs/MODEL_TRAINING.md`)
+  * Training pipeline, fixtures, validation workflow
+  * Hyperparameter tuning guide
+  * CLI command reference
+  * Best practices and troubleshooting
+- 33 new tests for fixtures and database integration (99% fixture coverage)
+  * `test_training_fixtures.py`: 16 tests covering loading, metadata, distributions
+  * `test_model_database.py`: 17 tests covering registration, validation, queries
+- Updated README.md with model training section and test count (301 tests)
+
+### Changed
+- Enhanced `ModelMetadata` with `from_json_file()` class method for loading from disk
+- Updated technology stack notes (301 tests, 83% coverage)
+
 ## [0.9.1] - 2026-01-25
 
 ### Fixed
